@@ -215,7 +215,7 @@ final class VoiceService: ObservableObject {
         request.requiresOnDeviceRecognition = true
         self.request = request
         task = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self, self.generation == session else { return }
                 if let result {
                     self.transcript = result.bestTranscription.formattedString

@@ -112,7 +112,7 @@ final class RemoteVoiceCapture {
         connection.setCodeSigningRequirement(requirement)
         connection.remoteObjectInterface = NSXPCInterface(with: VoiceHelperProtocol.self)
         let failed: (String) -> Void = { [weak self] message in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self, self.generation == token else { return }
                 self.stop(); onError(message)
             }
@@ -135,7 +135,7 @@ final class RemoteVoiceCapture {
         process.standardError = FileHandle.nullDevice
         process.terminationHandler = { [weak self] ended in
             let status = ended.terminationStatus
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self, self.generation == token else { return }
                 self.stop()
                 onError("语音帧读取已停止（状态 \(status)），请重新开始语音输入")
@@ -144,7 +144,7 @@ final class RemoteVoiceCapture {
         output.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             guard !data.isEmpty else { return }
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self, self.generation == token else { return }
                 do { for frame in try self.parser.ingest(data) { onFrame(frame) } }
                 catch { self.stop(); onError(error.localizedDescription) }

@@ -94,19 +94,19 @@ final class RemoteVoiceService: ObservableObject {
         self.transport = transport; self.monitor = monitor
         // Register before subscription / AF: initial notifications cannot be lost.
         transport.onNotification = { [weak self] data in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self, self.generation == session else { return }
                 self.receive(data)
             }
         }
         transport.onDiagnostic = { [weak self] detail in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self, self.generation == session, !self.hasDecodedAudio else { return }
                 self.status = detail
             }
         }
         transport.onDisconnect = { [weak self] detail in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self, self.generation == session else { return }
                 self.fail(detail)
             }
