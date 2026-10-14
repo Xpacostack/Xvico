@@ -96,7 +96,8 @@ final class AppModel: ObservableObject {
         persist()
         for name in observeSystem ? [NSWorkspace.screensDidSleepNotification, NSWorkspace.screensDidWakeNotification] : [] {
             displayObservers.append(NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
-                Task { @MainActor in self?.screenSleeping = note.name == NSWorkspace.screensDidSleepNotification }
+                let sleeping = note.name == NSWorkspace.screensDidSleepNotification
+                Task { @MainActor [weak self] in self?.screenSleeping = sleeping }
             })
         }
         inputMonitor.onStatus = { [weak self] in self?.remoteStatus = $0 }
@@ -130,10 +131,12 @@ final class AppModel: ObservableObject {
         ) { [weak self] note in
             guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
             guard app.bundleIdentifier != "work.xvibe.remote" else { return }
-            Task { @MainActor in
+            let name = app.localizedName ?? "未知应用"
+            let bundleID = app.bundleIdentifier ?? ""
+            Task { @MainActor [weak self] in
                 self?.manuallyActiveSceneID = nil
-                self?.currentApp = app.localizedName ?? "未知应用"
-                self?.currentBundleID = app.bundleIdentifier ?? ""
+                self?.currentApp = name
+                self?.currentBundleID = bundleID
             }
         } }
         if observeSystem, let frontmost = NSWorkspace.shared.frontmostApplication,

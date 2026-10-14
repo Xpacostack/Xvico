@@ -393,7 +393,3 @@ struct SettingsSection<Content: View>: View {
             .shadow(color: .black.opacity(0.045), radius: 13, y: 5)
     }
 }
-
-extension URL: @retroactive Identifiable {
-    public var id: String { absoluteString }
-}

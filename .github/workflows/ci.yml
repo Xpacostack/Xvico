@@ -32,7 +32,7 @@ jobs:
           path = Path('/tmp/xvico-tests.log')
           if path.exists():
               lines = path.read_text().splitlines()
-              failures = [line for line in lines if re.search(r'error:|failed|fatal|signal', line, re.I)]
+              failures = list(dict.fromkeys(line for line in lines if re.search(r'error:|failed|fatal|signal', line, re.I)))
               for line in (failures or lines[-12:])[:15]:
                   message = line[:1800].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
                   print('::error title=Swift test failure::' + message)
