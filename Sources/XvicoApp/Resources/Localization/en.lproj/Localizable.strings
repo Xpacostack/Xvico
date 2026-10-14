@@ -619,3 +619,17 @@
 "无法启动已授权语音后台：%@" = "Cannot start the approved voice helper: %@";
 "正在准备遥控器音频通道，请稍候。" = "Preparing the remote audio channel. Please wait.";
 "撤销" = "Undo";
+
+// Public installer runtime import
+"Apple 签名验证失败，未导入运行时" = "Apple signature verification failed. The runtime was not imported.";
+"Apple 语音运行时已就绪" = "Apple voice runtime is ready";
+"公开安装包不附带 Apple 工具。导入官方 PacketLogger.app 后即可配置遥控器语音，应用签名保持不变。" = "The public installer does not include Apple tools. Import an official PacketLogger.app to set up remote voice input without changing the app signature.";
+"导入 Apple 语音运行时" = "Import Apple Voice Runtime";
+"所选目录缺少 Apple 语音运行时组件" = "The selected folder is missing Apple voice runtime components.";
+"正在验证并导入 Apple 运行时" = "Verifying and importing Apple runtime";
+"获取 Apple 官方工具" = "Get Official Apple Tools";
+"语音运行时目录包含不安全链接" = "The voice runtime folder contains an unsafe link.";
+"请先在语音设置中导入官方 Apple 运行时" = "Import the official Apple runtime in Voice Settings first.";
+"请选择官方 PacketLogger.app 或语音运行时目录" = "Select the official PacketLogger.app or voice runtime folder.";
+"遥控器语音需要 Apple 运行时" = "Remote voice input requires the Apple runtime";
+"重新导入 Apple 运行时" = "Reimport Apple Runtime";

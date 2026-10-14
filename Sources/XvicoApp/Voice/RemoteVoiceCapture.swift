@@ -46,12 +46,11 @@ final class RemoteVoiceCapture {
         let backendHelper = resources.appendingPathComponent("AudioBackend/XvibeBackendHelper")
         let installedBackend = FileManager.default.isExecutableFile(atPath: "/Library/Application Support/Xvibe/AudioBackend/XvibeBackendRunner")
         let readerURL = resources.appendingPathComponent("VoiceTools/XvibeFrameReader")
-        let runtime = resources.appendingPathComponent("PacketLoggerRuntime")
         guard FileManager.default.isExecutableFile(atPath: helper.path), FileManager.default.isExecutableFile(atPath: readerURL.path) else {
             onError("语音采集工具尚未打包"); return
         }
-        guard FileManager.default.isExecutableFile(atPath: runtime.appendingPathComponent("Resources/packetlogger").path) else {
-            onError("Apple 音频采集运行时尚未打包，请重新构建运行时"); return
+        guard let runtime = VoiceRuntimeLocation.resolve(app: Bundle.main.bundleURL, home: FileManager.default.homeDirectoryForCurrentUser) else {
+            onError("请先在语音设置中导入官方 Apple 运行时"); return
         }
         let directory = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Caches/Xvibe/VoiceSessions/\(UUID().uuidString)")

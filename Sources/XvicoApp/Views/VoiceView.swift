@@ -9,6 +9,7 @@ struct VoiceView: View {
     @State private var captureApproval = false
     @StateObject private var backend = AudioBackendManager()
     @StateObject private var authorization = VoiceBackendAuthorization()
+    @StateObject private var runtime = AppleVoiceRuntimeManager()
     @State private var removeAuthorizationApproval = false
     @State private var backendApproval = false
     @State private var brandingApproval = false
@@ -17,7 +18,7 @@ struct VoiceView: View {
     @State private var showingInputHelp = false
 
     private var configurationLocked: Bool {
-        voice.isListening || voice.isStarting || voice.isFinalizing || remoteVoice.isConnecting || remoteVoice.isSubscribed || authorization.busy
+        voice.isListening || voice.isStarting || voice.isFinalizing || remoteVoice.isConnecting || remoteVoice.isSubscribed || authorization.busy || runtime.busy
     }
 
     var body: some View {
@@ -26,8 +27,11 @@ struct VoiceView: View {
                 SettingsSection(title: "语音输入", symbol: "waveform") {
                     inputSettings
                     Divider().padding(.vertical, 2)
-                    if voice.inputSource == .siriRemote { persistentAuthorization }
-                    VoiceStatusPanel(onToggle: toggleListening).disabled(authorization.busy)
+                    if voice.inputSource == .siriRemote {
+                        if !runtime.available { runtimeImport }
+                        persistentAuthorization
+                    }
+                    VoiceStatusPanel(onToggle: toggleListening).disabled(authorization.busy || runtime.busy)
                     recognizedText
                 }
                 voiceCommands
@@ -37,7 +41,7 @@ struct VoiceView: View {
             .padding(XvicoLayout.pageInset)
             .frame(maxWidth: .infinity)
         }.buttonStyle(XvicoActionButtonStyle()).onDisappear { virtualMicrophone.stop() }
-        .onAppear { authorization.refresh() }
+        .onAppear { authorization.refresh(); runtime.refresh() }
         .alert(XvicoLocalization.string(installingBackend ? "安装 Xvico 系统语音后端？" : "卸载 Xvico 系统语音后端？", locale: model.interfaceLocale), isPresented: $backendApproval) {
             Button(XvicoLocalization.string("取消", locale: model.interfaceLocale), role: .cancel) { }
             Button(XvicoLocalization.string("继续并请求管理员批准", locale: model.interfaceLocale)) { backend.manage(installing: installingBackend) }
@@ -84,7 +88,20 @@ struct VoiceView: View {
             }
             Spacer(minLength: 8)
             if !authorization.ready {
-                Button("保存后台授权") { captureApproval = true }.disabled(configurationLocked)
+                Button("保存后台授权") { captureApproval = true }.disabled(configurationLocked || !runtime.available)
+            }
+        }.padding(13).xvicoGlassPanel(cornerRadius: 12)
+    }
+
+    private var runtimeImport: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            XvicoLocalizedLabel(runtime.status, systemImage: "shippingbox").font(.system(size: 12, weight: .semibold))
+            XvicoLocalizedText("公开安装包不附带 Apple 工具。导入官方 PacketLogger.app 后即可配置遥控器语音，应用签名保持不变。")
+                .font(XvicoTypography.caption).foregroundStyle(XvicoTheme.secondaryText)
+            HStack {
+                Button("导入 Apple 语音运行时") { runtime.chooseRuntime(locale: model.interfaceLocale) }.disabled(configurationLocked)
+                Link("获取 Apple 官方工具", destination: URL(string: "https://developer.apple.com/download/all/")!)
+                    .font(XvicoTypography.caption)
             }
         }.padding(13).xvicoGlassPanel(cornerRadius: 12)
     }
@@ -223,6 +240,9 @@ struct VoiceView: View {
                             .disabled(configurationLocked || backend.busy)
                     }
                     Button("检查后台授权") { authorization.refresh() }.disabled(authorization.busy)
+                    if runtime.available {
+                        Button("重新导入 Apple 运行时") { runtime.chooseRuntime(locale: model.interfaceLocale) }.disabled(configurationLocked)
+                    }
                     if voice.inputSource == .siriRemote {
                         VStack(alignment: .leading, spacing: 6) {
                             XvicoLocalizedText(remoteVoice.status)
@@ -265,6 +285,8 @@ struct VoiceView: View {
             remoteVoice.stop(); voice.stop(); return
         }
         if voice.inputSource == .siriRemote {
+            runtime.refresh()
+            guard runtime.available else { model.show("请先在语音设置中导入官方 Apple 运行时"); return }
             authorization.refresh()
             if authorization.ready { startCapture() }
             else { captureApproval = true }

@@ -45,7 +45,7 @@ private func protectedDirectory(_ url: URL) throws {
 }
 
 private func hardenPayload(_ url: URL) throws {
-    try fm.setAttributes([.ownerAccountID: 0, .groupOwnerAccountID: 0, .posixPermissions: 0o755], ofItemAtPath: url.path)
+    try fm.setAttributes([.ownerAccountID: 0, .groupOwnerAccountID: 0, .posixPermissions: 0o700], ofItemAtPath: url.path)
     guard let entries = fm.enumerator(at: url, includingPropertiesForKeys: nil) else { try fail("无法检查语音组件") }
     for case let path as URL in entries {
         var info = stat()
@@ -60,9 +60,32 @@ private func hardenPayload(_ url: URL) throws {
                 .posixPermissions: executable ? 0o755 : 0o644], ofItemAtPath: path.path)
         }
     }
+    try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
 }
 
-private func installVoiceService(from app: URL) throws {
+private func runtimeSource(app: URL, uid: uid_t) throws -> URL {
+    guard uid >= 500, let user = getpwuid(uid),
+          let source = VoiceRuntimeLocation.resolve(app: app, home: URL(fileURLWithPath: String(cString: user.pointee.pw_dir))) else {
+        try fail("请先在语音设置中导入官方 Apple 运行时")
+    }
+    return source
+}
+
+private func copyAppleRuntime(from source: URL, to destination: URL) throws {
+    try fm.createDirectory(at: destination, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+    for (relative, _) in VoiceRuntimeLocation.components {
+        let target = destination.appendingPathComponent(relative)
+        try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try fm.copyItem(at: source.appendingPathComponent(relative), to: target)
+    }
+    try hardenPayload(destination)
+    for (relative, identifier) in VoiceRuntimeLocation.components {
+        try command("/usr/bin/codesign", ["--verify", "--deep", "--strict", "--all-architectures", "-R",
+            "=identifier \"\(identifier)\" and anchor apple", destination.appendingPathComponent(relative).path])
+    }
+}
+
+private func installVoiceService(from app: URL, uid: uid_t) throws {
     guard !fm.fileExists(atPath: plist.path) else { try fail("请先停止临时语音采集") }
     try verify(app)
     let parent = voiceRoot.deletingLastPathComponent()
@@ -80,11 +103,8 @@ private func installVoiceService(from app: URL) throws {
     try fm.copyItem(at: resources.appendingPathComponent("VoiceTools/XvibeVoiceCapture"), to: stage.appendingPathComponent("XvibeVoiceCapture"))
     try verify(stage.appendingPathComponent("XvibeVoiceCapture"))
     let runtime = stage.appendingPathComponent("PacketLoggerRuntime")
-    try fm.copyItem(at: resources.appendingPathComponent("PacketLoggerRuntime"), to: runtime)
+    try copyAppleRuntime(from: runtimeSource(app: app, uid: uid), to: runtime)
     try hardenPayload(stage)
-    for component in ["Resources/packetlogger", "Frameworks/PacketDecoder.framework"] {
-        try command("/usr/bin/codesign", ["--verify", "--deep", "--strict", "-R", "=anchor apple", runtime.appendingPathComponent(component).path])
-    }
     // Verify copied code after it is in root-only staging. No user-writable
     // executable or caller-selected command is ever run by the service.
     for name in [VoiceHelperContract.executable, "XvibeBackendRunner", "XvibeAudioRouter", "XvibeVoiceCapture", "libopus.0.dylib"] {
@@ -165,8 +185,8 @@ private func checkAudioHealth() throws {
         defer { close(lock) }
         switch args[1] {
         case "install-service":
-            guard args.count == 3 else { try fail("缺少源应用路径") }
-            try installVoiceService(from: URL(fileURLWithPath: args[2]).standardizedFileURL)
+            guard args.count == 4, let uid = UInt32(args[3]), uid >= 500 else { try fail("缺少源应用路径或用户身份") }
+            try installVoiceService(from: URL(fileURLWithPath: args[2]).standardizedFileURL, uid: uid)
         case "remove-service":
             guard args.count == 2 else { try fail("无效服务移除请求") }
             try removeVoiceService()
@@ -185,7 +205,8 @@ private func checkAudioHealth() throws {
                 try fm.copyItem(at: resources.appendingPathComponent("VoiceTools/\(name)"), to: payload.appendingPathComponent(name))
                 try verify(payload.appendingPathComponent(name))
             }
-            try fm.copyItem(at: resources.appendingPathComponent("PacketLoggerRuntime"), to: payload.appendingPathComponent("PacketLoggerRuntime"))
+            // The HAL device can be installed before the optional runtime is
+            // imported. Capture verifies and stages it separately when needed.
             for name in ["XvibeAudioRouter", "XvibeBackendRunner", "XvibeMicrophone.driver", "libopus.0.dylib"] { try verify(payload.appendingPathComponent(name)) }
             try fm.createDirectory(at: root.deletingLastPathComponent(), withIntermediateDirectories: true)
             try fm.createDirectory(at: driver.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -259,6 +280,19 @@ private func checkAudioHealth() throws {
             // bundle stays loaded; no reinstall or system-audio restart is needed.
             let app = URL(fileURLWithPath: args[5]).standardizedFileURL
             try verify(app)
+            let runtimeStage = root.appendingPathComponent(".runtime-\(UUID())")
+            let runtimePrevious = root.appendingPathComponent(".runtime-old-\(UUID())")
+            let runtime = root.appendingPathComponent("PacketLoggerRuntime")
+            defer { try? fm.removeItem(at: runtimeStage) }
+            try copyAppleRuntime(from: runtimeSource(app: app, uid: uid), to: runtimeStage)
+            var savedRuntime = false
+            if fm.fileExists(atPath: runtime.path) { try fm.moveItem(at: runtime, to: runtimePrevious); savedRuntime = true }
+            do { try fm.moveItem(at: runtimeStage, to: runtime) }
+            catch {
+                if savedRuntime { try? fm.moveItem(at: runtimePrevious, to: runtime) }
+                throw error
+            }
+            if savedRuntime { try? fm.removeItem(at: runtimePrevious) }
             for (relative, name) in [("VoiceTools/XvibeVoiceCapture", "XvibeVoiceCapture"), ("AudioBackend/XvibeBackendRunner", "XvibeBackendRunner")] {
                 let staged = root.appendingPathComponent(".update-\(UUID())")
                 defer { try? fm.removeItem(at: staged) }

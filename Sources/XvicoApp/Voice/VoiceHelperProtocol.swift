@@ -44,3 +44,20 @@ enum VoiceHelperContract {
         return "identifier \"\(identifier)\" and certificate leaf = H\"\(fingerprint)\""
     }
 }
+
+enum VoiceRuntimeLocation {
+    static let components = [("Resources/packetlogger", "com.apple.packetlogger"),
+                             ("Frameworks/PacketDecoder.framework", "com.apple.PacketDecoder")]
+
+    static func imported(in home: URL) -> URL {
+        home.appendingPathComponent("Library/Application Support/Xvico/PacketLoggerRuntime")
+    }
+    static func hasLayout(_ url: URL) -> Bool {
+        FileManager.default.isExecutableFile(atPath: url.appendingPathComponent(components[0].0).path)
+            && FileManager.default.fileExists(atPath: url.appendingPathComponent(components[1].0).path)
+    }
+    static func resolve(app: URL, home: URL) -> URL? {
+        [app.appendingPathComponent("Contents/Resources/PacketLoggerRuntime"), imported(in: home)]
+            .first(where: hasLayout)
+    }
+}

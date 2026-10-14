@@ -94,7 +94,7 @@ final class VoiceBackendAuthorization: ObservableObject {
     nonisolated static func authorizedOperation(_ operation: String, _ bundle: URL) async -> String? {
         guard ["install-service", "remove-service"].contains(operation) else { return "无效语音后台操作" }
         let helper = bundle.appendingPathComponent("Contents/Resources/AudioBackend/XvibeBackendHelper")
-        let args = operation == "install-service" ? [helper.path, operation, bundle.path] : [helper.path, operation]
+        let args = operation == "install-service" ? [helper.path, operation, bundle.path, String(getuid())] : [helper.path, operation]
         let command = args.map { "'" + $0.replacingOccurrences(of: "'", with: "'\\''") + "'" }.joined(separator: " ")
         let literal = command.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
         return await Task.detached {

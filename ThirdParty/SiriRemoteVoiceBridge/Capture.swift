@@ -72,7 +72,28 @@ enum XvibeVoiceCapture {
         // Freeze the signed Apple components into a root-owned private directory
         // before invoking them as root. Clear inherited DYLD environment variables.
         let protectedRuntime = privateDirectory.appendingPathComponent("Runtime")
-        try FileManager.default.copyItem(at: runtime, to: protectedRuntime)
+        let fm = FileManager.default
+        try fm.createDirectory(at: protectedRuntime, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        for relative in ["Resources/packetlogger", "Frameworks/PacketDecoder.framework"] {
+            let target = protectedRuntime.appendingPathComponent(relative)
+            try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try fm.copyItem(at: runtime.appendingPathComponent(relative), to: target)
+        }
+        if let entries = fm.enumerator(at: protectedRuntime, includingPropertiesForKeys: nil) {
+            for case let path as URL in entries {
+                var info = stat()
+                guard lstat(path.path, &info) == 0 else { throw CaptureError.invalidDirectory }
+                if info.st_mode & S_IFMT == S_IFLNK {
+                    guard path.resolvingSymlinksInPath().path.hasPrefix(protectedRuntime.path + "/"),
+                          lchown(path.path, 0, 0) == 0 else { throw CaptureError.invalidDirectory }
+                } else {
+                    guard info.st_mode & S_IFMT == S_IFDIR || info.st_mode & S_IFMT == S_IFREG else { throw CaptureError.invalidDirectory }
+                    try fm.setAttributes([.ownerAccountID: 0, .groupOwnerAccountID: 0,
+                        .posixPermissions: info.st_mode & S_IFMT == S_IFDIR || info.st_mode & 0o111 != 0 ? 0o755 : 0o644], ofItemAtPath: path.path)
+                }
+            }
+        }
+        try fm.setAttributes([.ownerAccountID: 0, .groupOwnerAccountID: 0, .posixPermissions: 0o755], ofItemAtPath: protectedRuntime.path)
         try verifyAppleRuntime(protectedRuntime)
         let trace = privateDirectory.appendingPathComponent("remote.pklg")
         let original = try readPreferences()

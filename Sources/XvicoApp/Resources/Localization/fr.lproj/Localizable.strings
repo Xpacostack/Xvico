@@ -619,3 +619,17 @@
 "无法启动已授权语音后台：%@" = "Impossible de démarrer le service vocal autorisé : %@";
 "正在准备遥控器音频通道，请稍候。" = "Préparation du canal audio de la télécommande. Patientez.";
 "撤销" = "Annuler";
+
+// Public installer runtime import
+"Apple 签名验证失败，未导入运行时" = "La vérification de la signature Apple a échoué. Le composant n’a pas été importé.";
+"Apple 语音运行时已就绪" = "Le composant vocal Apple est prêt";
+"公开安装包不附带 Apple 工具。导入官方 PacketLogger.app 后即可配置遥控器语音，应用签名保持不变。" = "L’installeur public n’inclut pas les outils Apple. Importez l’app officielle PacketLogger.app pour configurer la voix de la télécommande sans modifier la signature de l’app.";
+"导入 Apple 语音运行时" = "Importer le composant vocal Apple";
+"所选目录缺少 Apple 语音运行时组件" = "Le dossier sélectionné ne contient pas les éléments du composant vocal Apple.";
+"正在验证并导入 Apple 运行时" = "Vérification et importation du composant Apple";
+"获取 Apple 官方工具" = "Obtenir les outils officiels Apple";
+"语音运行时目录包含不安全链接" = "Le dossier du composant vocal contient un lien non sécurisé.";
+"请先在语音设置中导入官方 Apple 运行时" = "Importez d’abord le composant officiel Apple dans les réglages vocaux.";
+"请选择官方 PacketLogger.app 或语音运行时目录" = "Sélectionnez l’app officielle PacketLogger.app ou le dossier du composant vocal.";
+"遥控器语音需要 Apple 运行时" = "La voix de la télécommande nécessite le composant Apple";
+"重新导入 Apple 运行时" = "Réimporter le composant Apple";

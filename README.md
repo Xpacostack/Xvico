@@ -8,6 +8,15 @@ Xvico 是面向 macOS 的 Siri Remote 控制与语音输入工具。用遥控器
 
 ![Xvico 功能映射主页与可旋转的 3D Siri Remote](docs/screenshots/mapping-zh.png)
 
+## 下载安装
+
+**[下载 Xvico 1.0.0-beta.1 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.1/Xvico-1.0.0-beta.1-macos-arm64.dmg)** · [ZIP 备用包](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.1/Xvico-1.0.0-beta.1-macos-arm64.zip) · [版本说明与 SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.1)
+
+- **适用：Apple Silicon（M1 及更新芯片），macOS 13 或更新版本。** 此包不支持 Intel Mac。
+- 打开 DMG，将 **Xvico** 拖到 **Applications（应用程序）**，再从应用程序打开。
+- 当前为**自签名、未经过 Apple 公证的测试版**。首次打开可能被 macOS 阻止；请先核对下载来源及校验值，再按 **系统设置 → 隐私与安全性** 的提示操作，无需关闭 Gatekeeper。GitHub 构建使用临时签名身份，后续测试版更新可能需要重新批准隐私权限及安装后台组件。
+- 按键、触控与 Mac 麦克风可直接按下方说明配置。**遥控器麦克风另需自行取得官方 PacketLogger.app**，在 **语音设置 → 导入 Apple 语音运行时** 中导入后，再批准后端配置；公开安装包不附带 Apple 工具。导入不修改应用签名，也不会自动采音。
+
 ## 功能概览
 
 | 功能 | 可以做什么 |
@@ -80,7 +89,7 @@ open dist/Xvico.app
 
 ### Apple 音频运行时
 
-Mac 麦克风使用系统接口。Siri Remote 音频采集另外需要合法取得的、Apple 签名的 PacketLogger/PacketDecoder 运行时。**这些 Apple 二进制不包含在 Git 源码中。**
+Mac 麦克风使用系统接口。Siri Remote 音频采集另外需要合法取得的、Apple 签名的 PacketLogger/PacketDecoder 运行时。**这些 Apple 二进制不包含在 Git 源码或公开安装包中。** 已安装应用的用户可在 **语音设置 → 导入 Apple 语音运行时** 中选择官方 `PacketLogger.app`，无需重新构建。导入器会验证 Apple 签名，将所需组件保存在用户的 Application Support 中；后台安装会再次验证并复制到受保护的系统目录。
 
 取得官方工具后，将具有 `Resources/packetlogger` 和 `Frameworks/PacketDecoder.framework` 布局的运行时目录、`.app` 或其 `Contents` 目录加入本机构建：
 

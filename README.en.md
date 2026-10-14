@@ -8,6 +8,15 @@ Xvico is a macOS companion for Siri Remote, with customizable controls and voice
 
 ![Xvico Function Mapping with a rotatable 3D Siri Remote](docs/screenshots/mapping-en.png)
 
+## Download and install
+
+**[Download Xvico 1.0.0-beta.1 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.1/Xvico-1.0.0-beta.1-macos-arm64.dmg)** · [Alternative ZIP](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.1/Xvico-1.0.0-beta.1-macos-arm64.zip) · [Release notes and SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.1)
+
+- **Apple Silicon (M1 or later), macOS 13 or later.** This build does not support Intel Macs.
+- Open the DMG, drag **Xvico** to **Applications**, then open it from Applications.
+- This is a **self-signed beta, not Apple-notarized**. macOS may block the first launch. Verify the source and checksums, then follow **System Settings → Privacy & Security**. Do not disable Gatekeeper. GitHub builds use a disposable signing identity; future beta updates may require renewed privacy approval and helper installation.
+- Buttons, touch controls and the Mac microphone can be configured as described below. **Siri Remote audio additionally requires your own official PacketLogger.app**: choose **Voice Settings → Import Apple Voice Runtime**, then approve backend setup. Apple tools are excluded from the public installer. Importing neither changes the app signature nor starts capture.
+
 ## Features
 
 | Feature | What it does |
@@ -80,7 +89,7 @@ The script builds the app, audio tools and virtual microphone driver, signs the 
 
 ### Apple audio runtime
 
-The Mac microphone uses system APIs. Siri Remote audio capture also requires a lawfully obtained, Apple-signed PacketLogger/PacketDecoder runtime. **These Apple binaries are not included in the Git source distribution.**
+The Mac microphone uses system APIs. Siri Remote audio capture also requires a lawfully obtained, Apple-signed PacketLogger/PacketDecoder runtime. **These Apple binaries are excluded from both Git and public installers.** Installed-app users can choose the official `PacketLogger.app` under **Voice Settings → Import Apple Voice Runtime**, without rebuilding. The importer verifies Apple signatures and stores only the required components in the user’s Application Support. Backend installation verifies them again before copying into a protected system directory.
 
 After obtaining the official tools, import a runtime directory, an `.app`, or its `Contents` directory with the following layout: `Resources/packetlogger` and `Frameworks/PacketDecoder.framework`.
 
