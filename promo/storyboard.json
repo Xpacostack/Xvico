@@ -1,0 +1,315 @@
+{
+  "title": "Xvico · 用声音，开启 Vibe Coding",
+  "width": 1440,
+  "height": 1080,
+  "fps": 30,
+  "duration": 45,
+  "language": "zh-Hans",
+  "music": {
+    "bpm": 110,
+    "style": "original procedural electronic / voice-first motion demo",
+    "voiceover": false
+  },
+  "scenes": [
+    {
+      "id": "hero",
+      "start": 0,
+      "end": 3,
+      "eyebrow": "Xvico",
+      "title": "用声音，开启创造。",
+      "subtitle": ""
+    },
+    {
+      "id": "application",
+      "start": 3,
+      "end": 10,
+      "eyebrow": "Xvico 应用",
+      "title": "从 Xvico，开始。",
+      "subtitle": ""
+    },
+    {
+      "id": "mapping",
+      "start": 10,
+      "end": 14,
+      "eyebrow": "自定义映射",
+      "title": "每个按键，都听你的。",
+      "subtitle": ""
+    },
+    {
+      "id": "scenes",
+      "start": 14,
+      "end": 19,
+      "eyebrow": "应用预设",
+      "title": "切换应用，切换手感。",
+      "subtitle": ""
+    },
+    {
+      "id": "touch",
+      "start": 19,
+      "end": 24,
+      "eyebrow": "外圈控制",
+      "title": "轻轻一转，流畅向前。",
+      "subtitle": ""
+    },
+    {
+      "id": "voice",
+      "start": 24,
+      "end": 34,
+      "eyebrow": "语音输入",
+      "title": "按住，想法开始流动。",
+      "subtitle": ""
+    },
+    {
+      "id": "iterate",
+      "start": 34,
+      "end": 40,
+      "eyebrow": "Vibe Coding",
+      "title": "说出下一步，继续创造。",
+      "subtitle": ""
+    },
+    {
+      "id": "outro",
+      "start": 40,
+      "end": 45,
+      "eyebrow": "Xvico",
+      "title": "拿起遥控器，说出下一步。",
+      "subtitle": ""
+    }
+  ],
+  "demo": {
+    "disclosure": "交互与编程场景演示",
+    "project": "focus-timer",
+    "firstPrompt": "帮我做一个深色番茄钟网页，有开始、暂停和重置按钮。",
+    "secondPrompt": "改成青绿色，再加一个任务列表。",
+    "note": "Actual Xvico window captures and focused real controls; one continuous USDZ model, composed click/voice/Codex animations. No microphone capture or recognition-speed benchmark."
+  },
+  "proofTimes": [
+    2.8,
+    3.2,
+    4.1,
+    5.15,
+    5.6,
+    6.0,
+    7.2,
+    7.9,
+    8.5,
+    9.4,
+    10,
+    12,
+    13.5,
+    14.5,
+    15.5,
+    16.6,
+    17.4,
+    18.2,
+    19.4,
+    21.5,
+    23.6,
+    24.5,
+    25.2,
+    25.8,
+    26.5,
+    27.5,
+    28.8,
+    29.8,
+    31.6,
+    32.9,
+    33.8,
+    34.5,
+    35.8,
+    38.8,
+    40.4,
+    42.5
+  ],
+  "keyTimes": [
+    1.5,
+    6.8,
+    12,
+    17.5,
+    21.5,
+    30.8,
+    38.8,
+    42.5
+  ],
+  "transitionTimes": [
+    0,
+    3,
+    5.5,
+    8,
+    10,
+    14,
+    16.7,
+    19,
+    24,
+    25.5,
+    27.8,
+    29.2,
+    31.5,
+    34,
+    37.3,
+    40
+  ],
+  "sfxClicks": [
+    5.35,
+    10.7,
+    12.7,
+    17.2,
+    24.9,
+    31.5,
+    35.1,
+    37.3
+  ],
+  "remoteMotion": [
+    {
+      "time": 0,
+      "x": 775,
+      "y": 100,
+      "width": 640,
+      "yaw": -0.9
+    },
+    {
+      "time": 2,
+      "x": 775,
+      "y": 100,
+      "width": 640,
+      "yaw": -0.4
+    },
+    {
+      "time": 4,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "yaw": -0.06,
+      "registration": "main"
+    },
+    {
+      "time": 5.35,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "yaw": -0.06,
+      "registration": "main"
+    },
+    {
+      "time": 6.25,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "yaw": -0.06,
+      "registration": "siri"
+    },
+    {
+      "time": 7.8,
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "yaw": -0.06,
+      "registration": "siri"
+    },
+    {
+      "time": 10,
+      "x": 785,
+      "y": 212,
+      "width": 585,
+      "yaw": -0.42
+    },
+    {
+      "time": 12.4,
+      "x": 785,
+      "y": 212,
+      "width": 585,
+      "yaw": -0.42
+    },
+    {
+      "time": 15.4,
+      "x": 80,
+      "y": 230,
+      "width": 560,
+      "yaw": -0.28
+    },
+    {
+      "time": 17.6,
+      "x": 80,
+      "y": 230,
+      "width": 560,
+      "yaw": -0.28
+    },
+    {
+      "time": 20,
+      "x": 112.5,
+      "y": 210,
+      "width": 605,
+      "yaw": -0.06
+    },
+    {
+      "time": 23,
+      "x": 112.5,
+      "y": 210,
+      "width": 605,
+      "yaw": -0.06
+    },
+    {
+      "time": 25.4,
+      "x": 112.5,
+      "y": 210,
+      "width": 605,
+      "yaw": -0.06
+    },
+    {
+      "time": 26.7,
+      "x": 420,
+      "y": 210,
+      "width": 600,
+      "yaw": -0.5
+    },
+    {
+      "time": 27,
+      "x": 420,
+      "y": 210,
+      "width": 600,
+      "yaw": -0.5
+    },
+    {
+      "time": 28.9,
+      "x": 32,
+      "y": 230,
+      "width": 310,
+      "yaw": -0.5
+    },
+    {
+      "time": 31.4,
+      "x": 32,
+      "y": 230,
+      "width": 310,
+      "yaw": -0.5
+    },
+    {
+      "time": 33,
+      "x": -10,
+      "y": 215,
+      "width": 260,
+      "yaw": -0.48
+    },
+    {
+      "time": 35.2,
+      "x": 35,
+      "y": 510,
+      "width": 330,
+      "yaw": -0.48
+    },
+    {
+      "time": 39.6,
+      "x": 35,
+      "y": 510,
+      "width": 330,
+      "yaw": -0.48
+    },
+    {
+      "time": 40.85,
+      "x": 35,
+      "y": 510,
+      "width": 330,
+      "yaw": -0.48
+    }
+  ]
+}

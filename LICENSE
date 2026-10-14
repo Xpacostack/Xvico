@@ -1,0 +1,74 @@
+Xvico Source Available License 1.0
+SPDX-License-Identifier: LicenseRef-Xvico-Source-Available-1.0
+
+Copyright (c) 2026 the Xvico project rights holders.
+
+1. Scope
+
+"Licensor" means the applicable copyright holder or its authorized licensing
+representative. "Covered Material" means the original Xvico source code,
+documentation and modifications offered under this license. Material identified
+as third-party material, including ThirdParty/ and the components described in
+THIRD_PARTY_NOTICES.md, is excluded and remains under its own license. Nothing
+here limits rights independently granted by a third-party license.
+
+2. Personal and internal business use
+
+Licensor grants you a worldwide, royalty-free, non-exclusive copyright license
+to inspect, run, reproduce and modify Covered Material for personal purposes,
+research, education, evaluation and Internal Use. Internal Use includes use by
+an organization and its personnel or contractors solely for its internal
+operations, even in a business. You may use Xvico while doing paid work, writing
+commercial software and creating customer work products. Your resulting code,
+documents and other outputs are not subject to this license merely because you
+used Xvico to create them.
+
+3. Redistribution
+
+You may distribute Covered Material, including modifications, without charge
+and without making a Commercial Offering. Preserve this license, copyright and
+attribution notices, and THIRD_PARTY_NOTICES.md. Identify your modifications
+and do not imply Licensor's endorsement. Covered Material and its modifications
+must remain under this license; recipients obtain their rights directly from
+Licensor. You cannot grant broader rights without a separate authorization.
+
+4. Commercial offerings require written authorization
+
+A Commercial Offering means selling or licensing Covered Material or a
+derivative, charging for its distribution, bundling it in a paid product,
+providing Xvico's functionality to third parties as a paid or revenue-generating
+service, or charging specifically to deploy, operate or maintain Xvico for
+third parties. Ordinary Internal Use to produce unrelated work products is not
+a Commercial Offering.
+
+This license does not permit Commercial Offerings. Obtain a separate, explicit
+written commercial license from Licensor or its authorized representative
+before making one. Public repository access and permission for Internal Use do
+not grant commercial-offering rights. Contact the project's official maintainer
+channel or the in-app developer contact.
+
+5. Other rights
+
+Licensor grants only rights it owns or is authorized to grant. Third-party
+licenses take precedence for their components. No right to use Xvico, XPaco or
+third-party trademarks to endorse another product is granted. Statutory rights
+and exceptions are not restricted. Licensor may separately offer additional,
+including commercial, licenses.
+
+6. Termination
+
+Your rights terminate on a material breach. For a first breach, curing it within
+30 days after written notice reinstates the rights, unless a separate agreement
+provides otherwise. This does not affect compliant recipients or independently
+received third-party rights.
+
+7. Disclaimer
+
+TO THE EXTENT PERMITTED BY LAW, COVERED MATERIAL IS PROVIDED "AS IS", WITHOUT
+WARRANTIES, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE
+AND NON-INFRINGEMENT. NO LICENSOR OR CONTRIBUTOR IS LIABLE FOR DAMAGES ARISING
+FROM THIS MATERIAL OR LICENSE, EXCEPT WHERE LIABILITY CANNOT LAWFULLY BE EXCLUDED.
+
+This is a source-available license with commercial restrictions, not an
+OSI-approved open-source license. This English text controls; summaries do not
+expand or narrow the grants above.

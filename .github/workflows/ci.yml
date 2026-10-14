@@ -1,0 +1,17 @@
+name: macOS source checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned Opus
+        run: python3 scripts/build-opus.py
+      - name: Check source distribution
+        run: python3 scripts/check-release.py
+      - name: Check language tables
+        run: python3 scripts/audit-localization.py --check
+      - name: Run software regression tests
+        run: swift test

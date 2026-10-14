@@ -1,0 +1,25 @@
+{
+  "source": "Local dist/Xvico.app, actual window captures",
+  "date": "2026-10-14",
+  "files": {
+    "app-mapping-main.png": {
+      "bytes": 235508,
+      "sha256": "3d98224d92f11a697ba1588449ef1a0712932dd578101b06c5bd52352a031cae"
+    },
+    "app-scenes.png": {
+      "bytes": 365357,
+      "sha256": "77d1349fb21b24f957e9e86aa78e8fffe107538e55ba6e8a8ea999bf79a6e076"
+    },
+    "app-siri-mapping.png": {
+      "bytes": 354579,
+      "sha256": "50b729b411fbfcf7fbeaaa352716372c58bbcd6f6f83092f424d2d883f74411d"
+    },
+    "app-voice.png": {
+      "bytes": 314904,
+      "sha256": "24814e7dc58ba622d2b45827aacdd2cda9164c57f636c9d14310705c6d43a79c"
+    }
+  },
+  "originalsUnmodified": true,
+  "settingsModified": false,
+  "captureStarted": false
+}

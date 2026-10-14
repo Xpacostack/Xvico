@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>zh_CN</string>
+	<key>CFBundleDisplayName</key>
+	<string>Xvico</string>
+	<key>CFBundleExecutable</key>
+	<string>Xvico</string>
+	<key>CFBundleIdentifier</key>
+	<string>work.xvibe.remote</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleName</key>
+	<string>Xvico</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>2</string>
+	<key>CFBundleURLTypes</key>
+	<array><dict><key>CFBundleURLName</key><string>work.xvibe.remote.shortcuts</string><key>CFBundleURLSchemes</key><array><string>xvico</string><string>xpavi</string><string>xvibe</string></array></dict></array>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Xvico 需要通过蓝牙连接 Siri Remote，接收遥控器语音通道数据。</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Xvico 使用 Mac 麦克风进行语音命令识别。</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Xvico 使用系统语音识别将口述开发命令转换为文本。</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright 2026 Xvico</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+</dict>
+</plist>
