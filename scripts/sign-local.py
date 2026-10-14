@@ -2,7 +2,7 @@
 """Persistent local development identity; never grants macOS privacy permissions.
 
 Keys stay outside the repository. No trust settings, login keychain, or global
-keychain search list changes are made. Only codesign may access the signing key.
+keychain search list changes are made. Apple signing tools receive key access.
 """
 import hashlib
 import os
@@ -66,6 +66,10 @@ subjectKeyIdentifier=hash
              "-out", str(temp / "identity.p12"), "-passout", "stdin"], input=password.encode() + b"\n")
         run(["/usr/bin/security", "import", str(temp / "identity.p12"), "-k", str(keychain), "-P", password,
              "-x", "-T", "/usr/bin/codesign"])
+        # Modern macOS runners also require a partition ACL for noninteractive
+        # Apple signing tools. Configure only this newly generated keychain.
+        run(["/usr/bin/security", "set-key-partition-list", "-S", "apple-tool:,apple:",
+             "-k", password, str(keychain)])
 
 if not password_file.exists() or not certificate.exists():
     raise SystemExit("Signing keychain exists but identity metadata is missing; refusing to replace it.")

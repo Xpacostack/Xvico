@@ -9,7 +9,6 @@ jobs:
   release:
     runs-on: macos-14
     env:
-      XVICO_SIGNING_DIRECTORY: ${{ runner.temp }}/xvico-signing
       RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.0.0-beta.0' }}
     permissions:
       contents: write
@@ -25,6 +24,8 @@ jobs:
           python3 scripts/audit-localization.py --check
           swift test 2>&1 | tee /tmp/xvico-tests.log
       - name: Build public beta without Apple tools
+        env:
+          XVICO_SIGNING_DIRECTORY: ${{ runner.temp }}/xvico-signing
         run: |
           set -o pipefail
           ./build-app.sh --output dist/public-build/Xvico.app --without-apple-runtime --release-version "${RELEASE_TAG#v}" 2>&1 | tee /tmp/xvico-build.log
@@ -53,3 +54,9 @@ jobs:
               for line in list(dict.fromkeys(errors + lines[-18:]))[-24:]:
                   print('::error title=Release ' + name + '::' + line[:1800].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
           PY
+      - name: Remove temporary signing keychain
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/xvico-signing/identity.keychain-db" ]; then
+            security delete-keychain "$RUNNER_TEMP/xvico-signing/identity.keychain-db"
+          fi
