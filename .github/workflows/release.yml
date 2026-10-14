@@ -57,13 +57,15 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           for name in ['publish', 'package', 'build', 'tests']:
               path = Path('/tmp/xvico-' + name + '.log')
               if not path.exists(): continue
               lines = path.read_text().splitlines()
               # GitHub exposes only ten error annotations per step. Report
               # the most recent stage first, rather than filling it with tests.
-              for line in lines[-10:]:
+              failures = [line for line in lines if re.search(r'error:|RuntimeError:|Exception:|SystemExit:', line)]
+              for line in (failures or lines[-10:])[:10]:
                   print('::error title=Release ' + name + '::' + line[:1800].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
               break
           PY

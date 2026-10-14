@@ -688,6 +688,9 @@ final class AppModel: ObservableObject {
         touchSettings.wheelStyle = effectiveWheelStyle
         if !heldMouseBindings.isEmpty { touchSettings.ringEnabled = false }
         let outputs = gestureProcessor.process(sample, settings: touchSettings, mode: effectiveRingAction)
+        // Resting fingers, contact acquisition and filtered noise have no
+        // events to post. Avoid a system trust query on those hardware frames.
+        guard !outputs.isEmpty else { return }
         guard accessibilityCheck() else { pointerTarget = nil; return }
         for output in outputs {
             switch output {

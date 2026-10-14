@@ -4,12 +4,28 @@ import Combine
 @MainActor
 final class MappingIdleDismissal: ObservableObject {
     private let timeout: TimeInterval
-    private var pending: Task<Void, Never>?
+    typealias Scheduler = (TimeInterval, @escaping () -> Void) -> () -> Void
+    private let now: () -> TimeInterval
+    private let schedule: Scheduler
+    private var cancelPending: (() -> Void)?
+    private var deadline = 0.0
     private var eventMonitor: Any?
     private var dismiss: (() -> Void)?
     private var isInteracting: (() -> Bool)?
 
-    init(timeout: TimeInterval = 10) { self.timeout = timeout }
+    init(timeout: TimeInterval = 10,
+         now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+         schedule: @escaping Scheduler = { delay, fire in
+             let task = Task {
+                 do { try await Task.sleep(nanoseconds: UInt64(max(0, delay) * 1_000_000_000)) }
+                 catch { return }
+                 guard !Task.isCancelled else { return }
+                 fire()
+             }
+             return { task.cancel() }
+         }) {
+        self.timeout = timeout; self.now = now; self.schedule = schedule
+    }
 
     func begin(isInteracting: @escaping () -> Bool = { false }, onDismiss: @escaping () -> Void) {
         dismiss = onDismiss
@@ -30,11 +46,18 @@ final class MappingIdleDismissal: ObservableObject {
 
     func recordActivity() {
         guard dismiss != nil else { return }
-        pending?.cancel()
-        let delay = UInt64(max(0, timeout) * 1_000_000_000)
-        pending = Task { [weak self] in
-            do { try await Task.sleep(nanoseconds: delay) } catch { return }
-            guard !Task.isCancelled, let self else { return }
+        deadline = now() + timeout
+        // High-rate touch/mouse frames only update a timestamp. Keep one
+        // scheduled wakeup instead of creating and cancelling a Task per frame.
+        if cancelPending == nil { arm(after: timeout) }
+    }
+
+    private func arm(after delay: TimeInterval) {
+        cancelPending = schedule(delay) { [weak self] in
+            guard let self, self.dismiss != nil else { return }
+            self.cancelPending = nil
+            let remaining = self.deadline - self.now()
+            if remaining > 0 { self.arm(after: remaining); return }
             // Finish a held drag or modal app picker before starting another
             // idle interval; never tear down a control under an active press.
             if NSEvent.pressedMouseButtons != 0 || NSApp?.modalWindow != nil || self.isInteracting?() == true {
@@ -48,7 +71,7 @@ final class MappingIdleDismissal: ObservableObject {
     }
 
     func stop() {
-        pending?.cancel(); pending = nil
+        cancelPending?(); cancelPending = nil
         dismiss = nil
         isInteracting = nil
         if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }
@@ -56,7 +79,7 @@ final class MappingIdleDismissal: ObservableObject {
     }
 
     deinit {
-        pending?.cancel()
+        cancelPending?()
         if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }
     }
 }
