@@ -14,7 +14,8 @@ import tempfile
 
 os.umask(0o077)
 legacy_root = Path.home() / "Library/Application Support/Xvibe/DevelopmentSigning"
-root = legacy_root if legacy_root.exists() else Path.home() / "Library/Application Support/Xvico/DevelopmentSigning"
+root = Path(os.environ['XVICO_SIGNING_DIRECTORY']) if os.environ.get('XVICO_SIGNING_DIRECTORY') else (
+    legacy_root if legacy_root.exists() else Path.home() / "Library/Application Support/Xvico/DevelopmentSigning")
 root.mkdir(parents=True, exist_ok=True, mode=0o700)
 keychain = root / "identity.keychain-db"
 password_file = root / "keychain-password"
@@ -25,7 +26,8 @@ def run(args, **kwargs):
     result = subprocess.run(args, capture_output=True, **kwargs)
     if result.returncode:
         # Arguments can contain locally generated keychain passwords. Never log them.
-        raise RuntimeError(result.stderr.decode(errors="replace").strip() or "Signing command failed")
+        stage = Path(args[0]).name + ' ' + args[1]
+        raise RuntimeError(stage + ': ' + (result.stderr.decode(errors="replace").strip() or "Signing command failed"))
     return result.stdout
 
 

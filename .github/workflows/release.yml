@@ -1,12 +1,16 @@
 name: Package macOS beta
 on:
   push:
+    branches: [main]
     tags: ['v*-beta.*']
 permissions:
   contents: read
 jobs:
   release:
     runs-on: macos-14
+    env:
+      XVICO_SIGNING_DIRECTORY: ${{ runner.temp }}/xvico-signing
+      RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.0.0-beta.0' }}
     permissions:
       contents: write
     steps:
@@ -21,22 +25,18 @@ jobs:
           python3 scripts/audit-localization.py --check
           swift test 2>&1 | tee /tmp/xvico-tests.log
       - name: Build public beta without Apple tools
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           set -o pipefail
           ./build-app.sh --output dist/public-build/Xvico.app --without-apple-runtime --release-version "${RELEASE_TAG#v}" 2>&1 | tee /tmp/xvico-build.log
       - name: Create and verify DMG and ZIP
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           set -o pipefail
           python3 scripts/package-release.py --app dist/public-build/Xvico.app --version "${RELEASE_TAG#v}" 2>&1 | tee /tmp/xvico-package.log
       - name: Publish prerelease assets
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           gh release create "$RELEASE_TAG" dist/releases/*.dmg dist/releases/*.zip dist/releases/SHA256SUMS.txt dist/releases/release-manifest.json dist/releases/INSTALL.md --verify-tag --prerelease --title "Xvico ${RELEASE_TAG#v} · Apple Silicon" --notes-file dist/releases/INSTALL.md
       - name: Report failures
@@ -50,6 +50,6 @@ jobs:
               if not path.exists(): continue
               lines = path.read_text().splitlines()
               errors = list(dict.fromkeys(line for line in lines if re.search(r'error:|failed|fatal|signal|Error|SystemExit|Exception', line)))
-              for line in (errors or lines[-8:])[:12]:
+              for line in list(dict.fromkeys(errors + lines[-18:]))[-24:]:
                   print('::error title=Release ' + name + '::' + line[:1800].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
           PY
