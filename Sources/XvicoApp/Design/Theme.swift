@@ -107,13 +107,8 @@ private struct XvicoGlassPanel: ViewModifier {
                 content.background {
                     shape.fill(XvicoTheme.card).overlay { shape.fill(tint ?? .clear) }
                 }
-            } else if #available(macOS 26.0, *) {
-                content.background(XvicoTheme.panelSurface(colorScheme, floating: floating), in: shape)
-                    .glassEffect(.clear.tint(tint).interactive(interactive), in: shape)
             } else {
-                content.background(XvicoTheme.panelSurface(colorScheme, floating: floating), in: shape)
-                    .background(.ultraThinMaterial, in: shape)
-                    .background(tint?.opacity(0.4) ?? .clear, in: shape)
+                translucentSurface(content, shape: shape)
             }
         }
         .overlay {
@@ -129,6 +124,27 @@ private struct XvicoGlassPanel: ViewModifier {
         .shadow(color: .black.opacity(bordered ? (floating ? (colorScheme == .dark ? 0.32 : 0.17) : 0.055) : 0),
                 radius: floating ? 24 : 9, x: 0, y: floating ? 14 : 3)
         .shadow(color: .black.opacity(bordered && floating ? 0.08 : 0), radius: 3, x: 0, y: 1)
+    }
+
+    @ViewBuilder private func translucentSurface(_ content: Content, shape: RoundedRectangle) -> some View {
+        // Runtime availability alone still type-checks glassEffect against an
+        // older SDK. Keep macOS 13+ source builds working with older Xcodes.
+        #if compiler(>=6.2) && !XVICO_LEGACY_MATERIAL
+        if #available(macOS 26.0, *) {
+            content.background(XvicoTheme.panelSurface(colorScheme, floating: floating), in: shape)
+                .glassEffect(.clear.tint(tint).interactive(interactive), in: shape)
+        } else {
+            materialSurface(content, shape: shape)
+        }
+        #else
+        materialSurface(content, shape: shape)
+        #endif
+    }
+
+    private func materialSurface(_ content: Content, shape: RoundedRectangle) -> some View {
+        content.background(XvicoTheme.panelSurface(colorScheme, floating: floating), in: shape)
+            .background(.ultraThinMaterial, in: shape)
+            .background(tint?.opacity(0.4) ?? .clear, in: shape)
     }
 
     @ViewBuilder private func outline(_ shape: RoundedRectangle) -> some View {

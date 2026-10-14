@@ -6,7 +6,13 @@ jobs:
   verify:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
       - name: Build pinned Opus
         run: python3 scripts/build-opus.py
       - name: Check source distribution
@@ -14,4 +20,20 @@ jobs:
       - name: Check language tables
         run: python3 scripts/audit-localization.py --check
       - name: Run software regression tests
-        run: swift test
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee /tmp/xvico-tests.log
+      - name: Report test failures
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          path = Path('/tmp/xvico-tests.log')
+          if path.exists():
+              lines = path.read_text().splitlines()
+              failures = [line for line in lines if re.search(r'error:|failed|fatal|signal', line, re.I)]
+              for line in (failures or lines[-12:])[:15]:
+                  message = line[:1800].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+                  print('::error title=Swift test failure::' + message)
+          PY
