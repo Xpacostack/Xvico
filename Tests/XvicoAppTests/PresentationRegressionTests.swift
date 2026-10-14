@@ -5,6 +5,28 @@ import CoreImage
 
 @MainActor
 final class PresentationRegressionTests: XCTestCase {
+    func testStationaryTouchAvoidsSystemPermissionQueriesButMotionStillChecksTrust() throws {
+        let domain = "XvicoTests.TouchPresentation.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: domain))
+        var trustQueries = 0
+        var events: [CGEvent] = []
+        let model = AppModel(defaults: defaults, observeSystem: false,
+                             accessibilityCheck: { trustQueries += 1; return false },
+                             eventPoster: { events.append($0) })
+        defer { model.stopControl(); defaults.removePersistentDomain(forName: domain) }
+        model.settings.ringEnabled = false
+        for frame in 0..<120 {
+            model.handleTouch(.init(x: 0.5, y: 0.5, touching: true, timestamp: Double(frame) / 120))
+        }
+        XCTAssertEqual(trustQueries, 0, "A stationary contact emits no event and needs no trust query")
+        for frame in 120..<130 {
+            model.handleTouch(.init(x: 0.5 + Double(frame - 119) * 0.01, y: 0.5,
+                                    touching: true, timestamp: Double(frame) / 120))
+        }
+        XCTAssertGreaterThan(trustQueries, 0, "Real motion must still check permission before posting")
+        XCTAssertTrue(events.isEmpty, "Denied permission must continue blocking pointer events")
+    }
+
     func testContinuousScrollKeepsEveryInputEventWithoutInvalidatingWindow() async throws {
         let domain = "XvicoTests.ScrollPresentation.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: domain))
