@@ -28,7 +28,18 @@ jobs:
           XVICO_SIGNING_DIRECTORY: ${{ runner.temp }}/xvico-signing
         run: |
           set -o pipefail
-          ./build-app.sh --output dist/public-build/Xvico.app --without-apple-runtime --release-version "${RELEASE_TAG#v}" 2>&1 | tee /tmp/xvico-build.log
+          python3 - <<'PY' 2>&1 | tee /tmp/xvico-build.log
+          from pathlib import Path
+          import os, shlex, subprocess
+          subprocess.run(['python3', 'scripts/sign-local.py', '--fingerprint'], check=True)
+          keychain = str(Path(os.environ['XVICO_SIGNING_DIRECTORY']) / 'identity.keychain-db')
+          previous = shlex.split(subprocess.check_output(['security', 'list-keychains', '-d', 'user'], text=True))
+          # On macOS 14, codesign also needs the ephemeral keychain in the
+          # runner's search list to resolve its private key. Local builds do not.
+          subprocess.run(['security', 'list-keychains', '-d', 'user', '-s', keychain, *previous], check=True)
+          subprocess.run(['./build-app.sh', '--output', 'dist/public-build/Xvico.app',
+                          '--without-apple-runtime', '--release-version', os.environ['RELEASE_TAG'][1:]], check=True)
+          PY
       - name: Create and verify DMG and ZIP
         run: |
           set -o pipefail
@@ -39,20 +50,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release create "$RELEASE_TAG" dist/releases/*.dmg dist/releases/*.zip dist/releases/SHA256SUMS.txt dist/releases/release-manifest.json dist/releases/INSTALL.md --verify-tag --prerelease --title "Xvico ${RELEASE_TAG#v} · Apple Silicon" --notes-file dist/releases/INSTALL.md
+          set -o pipefail
+          gh release create "$RELEASE_TAG" dist/releases/*.dmg dist/releases/*.zip dist/releases/SHA256SUMS.txt dist/releases/release-manifest.json dist/releases/INSTALL.md --verify-tag --prerelease --title "Xvico ${RELEASE_TAG#v} · Apple Silicon" --notes-file dist/releases/INSTALL.md 2>&1 | tee /tmp/xvico-publish.log
       - name: Report failures
         if: failure()
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
-          for name in ['tests', 'build', 'package']:
+          for name in ['publish', 'package', 'build', 'tests']:
               path = Path('/tmp/xvico-' + name + '.log')
               if not path.exists(): continue
               lines = path.read_text().splitlines()
-              errors = list(dict.fromkeys(line for line in lines if re.search(r'error:|failed|fatal|signal|Error|SystemExit|Exception', line)))
-              for line in list(dict.fromkeys(errors + lines[-18:]))[-24:]:
+              # GitHub exposes only ten error annotations per step. Report
+              # the most recent stage first, rather than filling it with tests.
+              for line in lines[-10:]:
                   print('::error title=Release ' + name + '::' + line[:1800].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+              break
           PY
       - name: Remove temporary signing keychain
         if: always()
