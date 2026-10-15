@@ -4,7 +4,7 @@
 
 [简体中文](README.md) · [English](README.en.md)
 
-Xvico is a macOS companion for Siri Remote, with customizable controls and voice input. Move the pointer, scroll conversations and code, switch apps or tasks, and assign different button mappings to each app. For dictation, route audio from your Mac or Siri Remote to on-device recognition or your preferred input method.
+Xvico turns Apple TV Siri Remote into a macOS controller for voice-driven coding (vibe coding), customizable per-app mappings, and touch navigation. Move the pointer, scroll conversations and code, switch apps or tasks, and assign different button mappings to each app. For voice input in coding tools such as Codex, route audio from your Mac or Siri Remote to on-device recognition or your preferred input method.
 
 Beta.5 adds [unified configuration and hot reload](docs/configuration.md), click stabilization and drag acceleration, and improves key releases, voice lifecycle and remote reconnection. [See what changed](docs/releases/1.0.0-beta.5.md).
 

@@ -4,7 +4,9 @@
 
 [简体中文](README.md) · [English](README.en.md)
 
-Xvico 是面向 macOS 的 Siri Remote 控制与语音输入工具。用遥控器移动指针、滚动对话和代码、切换应用或任务，并为每个 App 配置独立按键映射；需要说话时，可将 Mac 或遥控器麦克风的声音交给本机识别或输入法。
+Xvico 将 Apple TV 的 Siri Remote 变成面向 macOS 的语音编程（Vibe Coding）遥控器，提供按 App 自定义映射、触控导航和语音输入。用遥控器移动指针、滚动对话和代码、切换应用或任务；需要说话时，可将 Mac 或遥控器麦克风的声音交给本机识别或输入法，用于 Codex 等编程工具中的文字输入。
+
+**English overview:** Xvico turns Apple TV Siri Remote into a macOS controller for voice-driven coding (vibe coding), customizable per-app mappings, and touch navigation. Use voice input with coding tools such as Codex through on-device recognition or your preferred input method. [Read the English guide](README.en.md).
 
 beta.5 新增[统一配置与热重载](docs/configuration.md)、点击稳定与拖动加速，并完善按键释放、语音启停和遥控器重连恢复。[查看本次更新](docs/releases/1.0.0-beta.5.md)。
 
