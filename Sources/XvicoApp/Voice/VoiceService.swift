@@ -25,6 +25,15 @@ final class VoiceService: ObservableObject {
     @Published private(set) var transcript = ""
     @Published private(set) var status = "语音已开放 · 等待开始"
     @Published private(set) var errorMessage: String?
+    @Published private(set) var latency = VoiceLatencyMetrics()
+    private var measurementActive = false
+    private(set) var measuringInputMethod = false
+    private var measurementID = UUID()
+    private func beginMeasurement() {
+        measurementID = UUID()
+        measurementActive = true
+        latency.begin(at: ProcessInfo.processInfo.systemUptime)
+    }
     @Published var inputSource: VoiceInputSource = VoiceInputSource(rawValue: UserDefaults.standard.string(forKey: "xvibe.voice.inputSource") ?? "") ?? .mac {
         didSet { UserDefaults.standard.set(inputSource.rawValue, forKey: "xvibe.voice.inputSource") }
     }
@@ -42,7 +51,15 @@ final class VoiceService: ObservableObject {
               model.remoteVoice.isSubscribed,
               binding.normalizedKeyboard.value == inputMethodTriggerKey,
               binding.modifiers.isEmpty else { return }
+        let wasHeld = model.remoteVoice.microphoneHeld
         model.remoteVoice.inputMethodTrigger()
+        if !wasHeld && model.remoteVoice.microphoneHeld {
+            beginMeasurement(); measuringInputMethod = true
+            latency.ready(at: ProcessInfo.processInfo.systemUptime)
+        } else if wasHeld && !model.remoteVoice.microphoneHeld {
+            latency.release(at: ProcessInfo.processInfo.systemUptime)
+            measurementActive = false
+        }
     }
     private var finishing: Task<Void, Never>?
     private var finalTranscriptHandler: ((String) -> Void)?
@@ -113,6 +130,9 @@ final class VoiceService: ObservableObject {
         await start(source: .siriRemote)
     }
     func appendRemoteAudio(_ buffer: AVAudioPCMBuffer) {
+        if measurementActive && buffer.frameLength > 0 && latency.firstAudioMilliseconds == nil {
+            latency.audio(at: ProcessInfo.processInfo.systemUptime)
+        }
         guard isListening, inputSource == .siriRemote else { return }
         request?.append(buffer); status = "正在本机识别 Siri Remote 音频"
     }
@@ -138,16 +158,28 @@ final class VoiceService: ObservableObject {
             }
             stop()
             pushHeld = true
-            let target = model.currentBundleID
+            beginMeasurement(); measuringInputMethod = false
+            let measurement = measurementID
             pushStartup = Task { [weak self, weak model] in
                 guard let self else { return }
+                let target = await model?.captureVoiceTarget()
+                guard !Task.isCancelled, self.pushHeld else { return }
                 await self.startRemote()
                 guard !Task.isCancelled, self.pushHeld, self.isListening else { return }
-                self.finalTranscriptHandler = { [weak model] text in model?.insertVoiceText(text, targetBundleID: target) }
+                self.finalTranscriptHandler = { [weak self, weak model] text in
+                    Task { @MainActor in
+                        let began = ProcessInfo.processInfo.systemUptime
+                        guard let model else { return }
+                        let result = await model.deliverVoiceText(text, to: target)
+                        guard let self, self.measurementID == measurement else { return }
+                        if result == .inserted { self.latency.deliveryMilliseconds = (ProcessInfo.processInfo.systemUptime - began) * 1000 }
+                    }
+                }
                 self.releaseMicrophone = { [weak model] in model?.remoteVoice.setMicrophoneHeld(false) }
                 model?.remoteVoice.setMicrophoneHeld(true)
             }
         } else {
+            latency.release(at: ProcessInfo.processInfo.systemUptime)
             releaseMicrophone?(); releaseMicrophone = nil
             pushHeld = false
             pushStartup?.cancel(); pushStartup = nil
@@ -175,9 +207,16 @@ final class VoiceService: ObservableObject {
         guard !isListening && !isStarting else { return }
         inputSource = source
         isStarting = true
-        defer { isStarting = false }
         let session = UUID()
         generation = session
+        defer {
+            if generation == session {
+                isStarting = false
+                if !isListening { measurementActive = false }
+            }
+        }
+        if !measurementActive { beginMeasurement() }
+        measuringInputMethod = false
         errorMessage = nil
         let audioAllowed = source == .siriRemote ? true : await requestMicrophonePermission()
         guard !Task.isCancelled, generation == session else { return }
@@ -219,7 +258,11 @@ final class VoiceService: ObservableObject {
                 guard let self, self.generation == session else { return }
                 if let result {
                     self.transcript = result.bestTranscription.formattedString
+                    if !self.transcript.isEmpty && self.latency.firstTextMilliseconds == nil {
+                        self.latency.text(at: ProcessInfo.processInfo.systemUptime)
+                    }
                     if result.isFinal {
+                        self.latency.final(at: ProcessInfo.processInfo.systemUptime)
                         let handler = self.finalTranscriptHandler
                         let text = self.transcript
                         self.stop(); self.status = "识别完成"
@@ -241,14 +284,23 @@ final class VoiceService: ObservableObject {
         }
         if source == .mac {
             let input = engine.inputNode
-            input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0)) { buffer, _ in
+            let firstFrame = VoiceFirstFrameGate()
+            input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0)) { [weak self] buffer, _ in
                 request.append(buffer)
+                if buffer.frameLength > 0 && firstFrame.take() {
+                    let arrived = ProcessInfo.processInfo.systemUptime
+                    Task { @MainActor [weak self] in
+                        guard let self, self.generation == session, self.measurementActive else { return }
+                        self.latency.audio(at: arrived)
+                    }
+                }
             }
             tapInstalled = true
         }
         do {
             if source == .mac { engine.prepare(); try engine.start() }
             isListening = true
+            latency.ready(at: ProcessInfo.processInfo.systemUptime)
             status = source == .siriRemote ? "等待 Siri Remote 音频（未使用 Mac 麦克风）" : "正在本机识别 Mac 麦克风"
             transcript = ""
         } catch {
@@ -265,6 +317,7 @@ final class VoiceService: ObservableObject {
     }
 
     func stop() {
+        measurementActive = false
         releaseMicrophone?(); releaseMicrophone = nil
         isFinalizing = false
         pushStartup?.cancel(); pushStartup = nil; pushHeld = false

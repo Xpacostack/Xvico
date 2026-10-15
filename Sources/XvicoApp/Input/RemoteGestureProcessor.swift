@@ -32,7 +32,8 @@ struct RemoteGestureProcessor {
     private var pointerMotion = RemotePointerMotionFilter()
     private var scrollRemainder = 0.0
 
-    mutating func process(_ sample: RemoteTouchSample, settings: XvicoSettings, mode: RingAction) -> [RemoteGestureOutput] {
+    mutating func process(_ sample: RemoteTouchSample, settings: XvicoSettings, mode: RingAction,
+                          pointerPaused: Bool = false) -> [RemoteGestureOutput] {
         guard sample.touching && settings.touchEnabled else {
             let result: [RemoteGestureOutput] = switchingApps ? [.appEnd] : []
             previous = nil; accumulatedAngle = 0; switchingApps = false; previousMode = nil
@@ -47,6 +48,12 @@ struct RemoteGestureProcessor {
         }
         previousMode = mode
         defer { previous = sample }
+        if pointerPaused {
+            if switchingApps { outputs.append(.appEnd); switchingApps = false }
+            accumulatedAngle = 0; scrollRemainder = 0
+            pointerMotion.seed(sample, warmup: false)
+            return outputs
+        }
         guard let previous else { pointerMotion.seed(sample); return outputs }
         // Compare the normalized distance directly with the stored 33%,
         // rather than doubling the radius into a fraction of the half-width.
@@ -56,7 +63,7 @@ struct RemoteGestureProcessor {
         guard settings.ringEnabled && radius >= ringRadius && previousRadius >= ringRadius else {
             if switchingApps { outputs.append(.appEnd); switchingApps = false }
             accumulatedAngle = 0; scrollRemainder = 0
-            if let movement = pointerMotion.process(sample, sensitivity: settings.pointerSensitivity) {
+            if let movement = pointerMotion.process(sample, sensitivity: settings.pointerSensitivity, profile: settings.pointerProfile) {
                 outputs.append(.pointer(movement.x, movement.y))
             }
             return outputs

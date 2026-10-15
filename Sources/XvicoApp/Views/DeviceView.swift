@@ -66,7 +66,7 @@ struct DeviceView: View {
                     statusLine("Siri Remote 按键", model.remoteStatus)
                     statusLine("Siri Remote 触控板", model.touchStatus)
                     DisclosureGroup("输入诊断", isExpanded: $inputDiagnosticsExpanded) {
-                        if inputDiagnosticsExpanded { RemoteDiagnosticsView(diagnostics: model.inputDiagnostics) }
+                        if inputDiagnosticsExpanded { RemoteDiagnosticsView() }
                     }
                     Button("重新识别遥控器触控板") { model.reidentifyRemote() }
                     HStack(alignment: .top, spacing: 16) {
@@ -84,6 +84,13 @@ struct DeviceView: View {
                     Toggle("启用触控板输入", isOn: $model.settings.touchEnabled)
                     XvicoLocalizedText("关闭后不移动光标、外圈手势不生效；五个机械点击区仍使用独立按键映射。").font(.caption).foregroundStyle(XvicoTheme.secondaryText)
                     slider("指针移动灵敏度", value: $model.settings.pointerSensitivity, range: 0.2...3, suffix: "×")
+                    XvicoOptionPicker(title: "指针响应", selection: $model.settings.pointerProfile,
+                                      options: PointerResponseProfile.allCases.map {
+                        XvicoOption(value: $0, title: $0.rawValue, symbol: $0 == .precise ? "scope" : $0 == .fast ? "hare" : "cursorarrow")
+                    })
+                    Toggle("中心点击稳定", isOn: $model.settings.clickStabilityEnabled)
+                    XvicoLocalizedText("均衡保留原有速度曲线；精准适合小目标，快速适合大屏移动。按下中心键时短暂稳定指针，明显移动后立即允许拖拽。")
+                        .font(.caption).foregroundStyle(XvicoTheme.secondaryText)
                     Toggle("启用外圈旋转", isOn: $model.settings.ringEnabled).disabled(!model.settings.touchEnabled)
                     XvicoOptionPicker(title: "外圈旋转动作", selection: ringModeBinding, options: [
                         XvicoOption(value: .switchApp, title: "切换 App", symbol: "rectangle.2.swap"),
@@ -213,14 +220,89 @@ struct DeviceView: View {
 }
 
 private struct RemoteDiagnosticsView: View {
+    @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var voice: VoiceService
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            LabeledContent {
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(model.currentApp)
+                    Text(model.currentBundleID).textSelection(.enabled)
+                }
+            } label: { XvicoLocalizedText("当前目标应用") }
+            LabeledContent {
+                if let scene = model.activeScene { Text(scene.name) }
+                else { XvicoLocalizedText("全局映射") }
+            } label: { XvicoLocalizedText("实际生效场景") }
+            if model.activeScene != nil {
+                XvicoLocalizedText(model.manuallyActiveSceneID == nil ? "按应用自动匹配" : "手动选择场景")
+            }
+            if !model.running { XvicoLocalizedText("控制已停止，以下仅显示配置解析结果。") }
+            else if model.activeScene == nil {
+                XvicoLocalizedText(model.settings.autoSwitchScenes ? "未匹配启用的场景，使用全局映射。" : "自动切换已关闭，使用全局映射。")
+            }
+            LabeledContent {
+                HStack {
+                    XvicoLocalizedText(model.effectiveRingAction.rawValue)
+                    XvicoLocalizedText(model.activeScene?.ringAction == nil ? "全局映射" : "应用场景")
+                        .foregroundStyle(XvicoTheme.secondaryText)
+                }
+            } label: { XvicoLocalizedText("实际外圈动作") }
+            if model.effectiveRingAction == .codexTasks && model.activeScene == nil {
+                XvicoLocalizedText("Codex 任务切换需要匹配 App 场景")
+            }
+            Divider()
+            ForEach(RemoteKey.physicalOrder) { key in
+                let resolution = model.runtimeResolution(for: key)
+                HStack(alignment: .top) {
+                    XvicoLocalizedText(key.displayName).frame(width: 88, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 3) {
+                        if key == .voice && voice.inputSource == .siriRemote && voice.recognitionMode == .local && voice.remotePushToTalk {
+                            XvicoLocalizedText("由内建语音接管")
+                        } else if (key == .volumeUp || key == .volumeDown) && model.settings.volumeKeyMode != .key {
+                            XvicoLocalizedText(model.settings.volumeKeyMode.rawValue)
+                            XvicoLocalizedText("音量键全局模式优先于按键映射")
+                                .foregroundStyle(XvicoTheme.secondaryText)
+                        } else {
+                            HStack {
+                                XvicoLocalizedText(resolution.binding.enabled ? resolution.binding.action.rawValue : "已关闭")
+                                Text(resolution.binding.diagnosticValue).textSelection(.enabled)
+                            }
+                            if resolution.binding.longPressEnabled && resolution.binding.action == .key {
+                                HStack { XvicoLocalizedText("长按来源"); XvicoLocalizedText(resolution.holdSource.rawValue) }
+                                    .foregroundStyle(XvicoTheme.secondaryText)
+                            }
+                            if resolution.binding.doubleClickEnabled && (key == .power || key == .voice && resolution.binding.action == .key && resolution.binding.siriMode == "分段模式") {
+                                HStack { XvicoLocalizedText("双击来源"); XvicoLocalizedText(resolution.doubleSource.rawValue) }
+                                    .foregroundStyle(XvicoTheme.secondaryText)
+                            }
+                        }
+                    }
+                    Spacer(minLength: 4)
+                    XvicoLocalizedText((key == .volumeUp || key == .volumeDown) && model.settings.volumeKeyMode != .key
+                                      ? BindingSource.global.rawValue : resolution.source.rawValue).foregroundStyle(XvicoTheme.secondaryText)
+                }
+            }
+            Divider()
+            RemoteOutputView(diagnostics: model.inputDiagnostics)
+            XvicoLocalizedText("其他鼠标与触控板保持 macOS 原生功能，不参与遥控器映射。")
+        }.font(.caption).foregroundStyle(XvicoTheme.secondaryText).padding(.top, 6)
+    }
+}
+
+private struct RemoteOutputView: View {
     @ObservedObject var diagnostics: RemoteInputDiagnostics
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             XvicoLocalizedText("实体输入：按键 \(diagnostics.buttonCount) 条 / 触控 \(diagnostics.touchCount) 帧 · \(diagnostics.lastButton)")
                 .textSelection(.enabled)
             XvicoLocalizedText("最近动作：\(diagnostics.lastAction)")
-            XvicoLocalizedText("其他鼠标与触控板保持 macOS 原生功能，不参与遥控器映射。")
-        }.font(.caption).foregroundStyle(XvicoTheme.secondaryText).padding(.top, 6)
+            if let output = diagnostics.lastOutput {
+                HStack { XvicoLocalizedText(output.kind); Text(output.value).textSelection(.enabled) }
+                Text(output.targetBundleID).textSelection(.enabled)
+                XvicoLocalizedText(output.sent ? "已发送事件；目标应用是否响应需实际确认。" : "未发送按键事件，请查看上方状态。")
+            }
+        }
     }
 }
 

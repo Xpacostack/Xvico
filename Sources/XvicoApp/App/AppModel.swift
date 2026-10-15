@@ -47,6 +47,7 @@ final class AppModel: ObservableObject {
     private let keyboardEventSource = CGEventSource(stateID: .combinedSessionState)
     private let realKeyboardTiming: Bool
     private var keyboardDownTimes: [UInt16: Double] = [:]
+    private let voiceTextDelivery: any VoiceTextDelivering
     private let microphoneSwitcher: (Int) throws -> String
     private var restoring = true
     private var sceneObserver: NSObjectProtocol?
@@ -71,6 +72,8 @@ final class AppModel: ObservableObject {
     private var ringToggleSuppressed = Set<RemoteKey>()
     private var gestureProcessor = RemoteGestureProcessor()
     private var pointerTarget: CGPoint?
+    private var clickStabilizer = PointerClickStabilizer()
+    private var latestTouchSample: RemoteTouchSample?
     private var touchSamplesReceived = 0
     private var lastTouchCountUpdate = 0.0
     private var lastTouchWasActive = false
@@ -83,8 +86,10 @@ final class AppModel: ObservableObject {
          accessibilityCheck: @escaping () -> Bool = AXIsProcessTrusted,
          eventPoster: @escaping (CGEvent) -> Void = { $0.post(tap: .cghidEventTap) },
          microphoneSwitcher: @escaping (Int) throws -> String = MacMicrophones.switchInput,
-         mouseClickTime: @escaping () -> Double = { Date.timeIntervalSinceReferenceDate }) {
+         mouseClickTime: @escaping () -> Double = { Date.timeIntervalSinceReferenceDate },
+         voiceTextDelivery: (any VoiceTextDelivering)? = nil) {
         self.defaults = defaults
+        self.voiceTextDelivery = voiceTextDelivery ?? VoiceTextDelivery()
         self.accessibilityCheck = accessibilityCheck
         self.eventPoster = eventPoster
         self.realKeyboardTiming = observeSystem
@@ -190,33 +195,11 @@ final class AppModel: ObservableObject {
     func runtimeBinding(for key: RemoteKey) -> KeyBinding {
         resolvedBinding(for: key, scene: activeScene)
     }
+    func runtimeResolution(for key: RemoteKey) -> BindingResolution {
+        BindingResolver.resolve(key, globals: settings.globalBindings, scene: activeScene)
+    }
     private func resolvedBinding(for key: RemoteKey, scene: XvicoScene?) -> KeyBinding {
-        let global = settings.globalBindings[key.rawValue] ?? key.referenceBinding
-        guard var binding = scene?.bindings[key.rawValue] else { return global }
-        switch binding.longPressOverride {
-        case .inherit:
-            binding.longPressEnabled = global.longPressEnabled
-            binding.longPressAction = global.longPressAction
-            binding.longPressValue = global.longPressValue
-            binding.longPressModifiers = global.longPressModifiers
-            binding.longPressRightModifiers = global.longPressRightModifiers
-            binding.holdNoOutput = global.holdNoOutput
-            binding.siriMode = global.siriMode
-        case .disabled: binding.longPressEnabled = false; binding.holdNoOutput = false
-        case .custom: break
-        }
-        switch binding.doubleClickOverride {
-        case .inherit:
-            binding.doubleClickEnabled = global.doubleClickEnabled
-            binding.doubleClickAction = global.doubleClickAction
-            binding.doubleClickValue = global.doubleClickValue
-            binding.doubleClickModifiers = global.doubleClickModifiers
-            binding.doubleClickRightModifiers = global.doubleClickRightModifiers
-            binding.powerDoubleClickAction = global.powerDoubleClickAction
-        case .disabled: binding.doubleClickEnabled = false
-        case .custom: break
-        }
-        return binding
+        BindingResolver.resolve(key, globals: settings.globalBindings, scene: scene).binding
     }
 
     func updateBinding(_ binding: KeyBinding, for key: RemoteKey) {
@@ -337,7 +320,6 @@ final class AppModel: ObservableObject {
             guard KeyboardOutput.named(binding.normalizedKeyboard.value) != nil else { show("未识别的按键：\(binding.value)，请重新录制"); return }
             if sendKeyboard(binding, down: true) {
                 _ = sendKeyboard(binding, down: false)
-                lastAction = "快捷键 \(binding.value)"
             }
             else { show("请在系统设置中授予 Xvico 辅助功能权限") }
         case .openApp:
@@ -355,6 +337,7 @@ final class AppModel: ObservableObject {
             }
             if binding.action == .textAndReturn { _ = sendKeyboard(KeyBinding(action: .key, value: "Return"), down: true); _ = sendKeyboard(KeyBinding(action: .key, value: "Return"), down: false) }
             lastAction = "文本已输入"
+            recordOutput("文本事件", value: "")
         case .screenOff:
             let task = Process()
             task.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
@@ -404,6 +387,19 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func captureVoiceTarget() async -> VoiceTextTarget? {
+        await voiceTextDelivery.capture(expectedBundleID: currentBundleID)
+    }
+
+    @discardableResult
+    func deliverVoiceText(_ text: String, to target: VoiceTextTarget?) async -> VoiceDeliveryResult {
+        let result = await voiceTextDelivery.insert(text, into: target)
+        show(result.message)
+        return result
+    }
+
+    // Manual insertion is explicit: activate the requested application, capture
+    // its current input field, then use the same guarded delivery as dictation.
     func insertVoiceText(_ text: String, targetBundleID: String? = nil) {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         let target = targetBundleID ?? currentBundleID
@@ -411,14 +407,12 @@ final class AppModel: ObservableObject {
               target != "work.xvibe.remote" else {
             show("先切换到需要输入文字的应用"); return
         }
-        guard accessibilityCheck() else { show("请授予 Xvico 辅助功能权限"); return }
         app.activate(options: [.activateIgnoringOtherApps])
         Task { [weak self] in
             try? await Task.sleep(nanoseconds: 200_000_000)
-            guard NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier else {
-                self?.show("目标应用尚未在前台，未输入文字"); return
-            }
-            self?.perform(KeyBinding(action: .text, value: text))
+            guard let self, !Task.isCancelled else { return }
+            let captured = await self.voiceTextDelivery.capture(expectedBundleID: target)
+            await self.deliverVoiceText(text, to: captured)
         }
     }
 
@@ -448,6 +442,8 @@ final class AppModel: ObservableObject {
     }
 
     private func clearMappingInputState() {
+        clickStabilizer.reset()
+        latestTouchSample = nil
         if siriVoiceConsumed { _ = siriVoiceHandler?(false) }
         siriVoiceConsumed = false
         endAppSwitcher()
@@ -507,11 +503,17 @@ final class AppModel: ObservableObject {
     private func sendKeyboard(_ binding: KeyBinding, down: Bool, manageModifiers: Bool = true) -> Bool {
         let binding = binding.normalizedKeyboard
         guard accessibilityCheck() else {
-            if down { show("快捷键未发送：请检查 Xvico 辅助功能权限") }
+            if down {
+                show("快捷键未发送：请检查 Xvico 辅助功能权限")
+                recordOutput("辅助功能未授权", value: binding.diagnosticValue, sent: false)
+            }
             return false
         }
         guard let output = KeyboardOutput.named(binding.value) else {
-            if down { show("未识别的按键：\(binding.value)，请重新录制") }
+            if down {
+                show("未识别的按键：\(binding.value)，请重新录制")
+                recordOutput("未识别的按键", value: binding.diagnosticValue, sent: false)
+            }
             return false
         }
         mappedKeyboardHandler?(binding, down)
@@ -523,6 +525,7 @@ final class AppModel: ObservableObject {
         if let systemCode = output.systemCode {
             let data1 = (systemCode << 16) | (down ? 0xA00 : 0xB00)
             if let event = NSEvent.otherEvent(with: .systemDefined, location: .zero, modifierFlags: NSEvent.ModifierFlags(rawValue: UInt(flags.rawValue)), timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: 0, context: nil, subtype: 8, data1: data1, data2: -1)?.cgEvent { eventPoster(event) }
+            if down { recordOutput("系统媒体键", value: binding.diagnosticValue) }
             return true
         }
         guard let code = output.keyCode else { return false }
@@ -545,7 +548,8 @@ final class AppModel: ObservableObject {
         if let event { event.setIntegerValueField(.eventSourceUserData, value: 0x7876696265); eventPoster(event) }
         if down {
             keyboardDownTimes[code] = ProcessInfo.processInfo.systemUptime
-            lastAction = "快捷键 " + binding.modifiers.sorted { $0.rawValue < $1.rawValue }.map(\.symbol).joined() + binding.value
+            lastAction = "快捷键 " + binding.diagnosticValue
+            recordOutput("键盘事件", value: binding.diagnosticValue)
         }
         for modifier in KeyboardModifier.allCases.reversed() where manageModifiers && binding.modifiers.contains(modifier) && !down {
             flags.remove(modifier.flag)
@@ -568,7 +572,11 @@ final class AppModel: ObservableObject {
                 if !pressed { siriVoiceConsumed = false; _ = siriVoiceHandler?(false) }
                 return
             }
-            if pressed && siriVoiceHandler?(true) == true { siriVoiceConsumed = true; return }
+            if pressed && siriVoiceHandler?(true) == true {
+                siriVoiceConsumed = true
+                recordOutput("语音工作流接管", value: "", sent: false)
+                return
+            }
             if !pressed { _ = siriVoiceHandler?(false) }
         }
         if ringToggleSuppressed.contains(key) {
@@ -595,11 +603,16 @@ final class AppModel: ObservableObject {
         if pressed {
             guard pressedBindings[key] == nil else { return }
             let binding = runtimeBinding(for: key)
-            guard binding.enabled else { show("\(key.displayName)在当前映射中已停用"); return }
+            guard binding.enabled else {
+                show("\(key.displayName)在当前映射中已停用")
+                recordOutput("按键映射已停用", value: key.displayName, sent: false)
+                return
+            }
             pressedBindings[key] = binding
             let doubleTap = binding.doubleClickEnabled && (key == .power || (key == .voice && binding.action == .key && binding.siriMode == "分段模式"))
             if binding.action == .click && !doubleTap {
                 heldMouseBindings[key] = binding.mouseButton
+                if key == .center && settings.clickStabilityEnabled { clickStabilizer.press(at: latestTouchSample) }
                 sendMouseButton(binding.mouseButton, down: true, key: key)
                 return
             }
@@ -625,6 +638,7 @@ final class AppModel: ObservableObject {
             guard let binding = pressedBindings.removeValue(forKey: key) else { return }
             if key.rawValue == settings.ringToggleKey { ringToggleLastTap = Date() }
             if let button = heldMouseBindings.removeValue(forKey: key) {
+                if key == .center { clickStabilizer.release(at: latestTouchSample) }
                 sendMouseButton(button, down: false)
                 return
             }
@@ -677,17 +691,21 @@ final class AppModel: ObservableObject {
     func resetRingDefaults() { settings.ringSensitivity = 1.08; settings.ringRadius = 0.33 }
     func reidentifyRemote() {
         endAppSwitcher()
+        clickStabilizer.reset(); latestTouchSample = nil
         gestureProcessor = RemoteGestureProcessor()
         if running { inputMonitor.reidentifyTouch() }
     }
     func handleTouch(_ sample: RemoteTouchSample) {
         guard running else { return }
+        latestTouchSample = sample
         if sample.touching { mappingInteraction.send() }
         if !sample.touching || !settings.touchEnabled { pointerTarget = nil }
         var touchSettings = settings
         touchSettings.wheelStyle = effectiveWheelStyle
+        if !settings.clickStabilityEnabled { clickStabilizer.reset() }
         if !heldMouseBindings.isEmpty { touchSettings.ringEnabled = false }
-        let outputs = gestureProcessor.process(sample, settings: touchSettings, mode: effectiveRingAction)
+        let outputs = gestureProcessor.process(sample, settings: touchSettings, mode: effectiveRingAction,
+                                              pointerPaused: clickStabilizer.suppresses(sample))
         // Resting fingers, contact acquisition and filtered noise have no
         // events to post. Avoid a system trust query on those hardware frames.
         guard !outputs.isEmpty else { return }
@@ -752,6 +770,7 @@ final class AppModel: ObservableObject {
             event.setIntegerValueField(.eventSourceUserData, value: 0x7876696265)
             eventPoster(event)
             lastAction = button.rawValue + (down ? "按下" : "松开")
+            if down { recordOutput("鼠标事件", value: button.rawValue) }
         }
         if !down { mouseClickCounts.removeValue(forKey: button) }
     }
@@ -765,6 +784,13 @@ final class AppModel: ObservableObject {
             eventPoster(event)
         }
         inputDiagnostics.recordAction("滚动 \(amount)\(pixels ? " 像素" : " 格")", throttled: true)
+        recordOutput(pixels ? "像素滚动" : "分段滚动", value: String(amount), throttled: true)
+    }
+
+    private func recordOutput(_ kind: String, value: String, sent: Bool = true, throttled: Bool = false) {
+        inputDiagnostics.recordOutput(.init(kind: kind, value: value,
+            targetBundleID: currentBundleID, sceneName: activeScene?.name,
+            sent: sent), throttled: throttled)
     }
 
     private func migrateLegacyMappingDefaults() {

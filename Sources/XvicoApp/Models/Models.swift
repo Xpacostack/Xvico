@@ -238,6 +238,17 @@ enum WheelStyle: String, Codable, CaseIterable, Identifiable {
     case continuous = "无极滚轮", stepped = "分段滑轮"
     var id: String { rawValue }
 }
+enum PointerResponseProfile: String, Codable, CaseIterable, Identifiable {
+    case precise = "精准", balanced = "均衡", fast = "快速"
+    var id: String { rawValue }
+    func gain(at speed: Double) -> Double {
+        switch self {
+        case .balanced: return 1
+        case .precise: return 0.72 + min(1, max(0, speed / 2.2)) * 0.18
+        case .fast: return 1 + min(1, max(0, speed / 2.2)) * 0.4
+        }
+    }
+}
 enum VolumeKeyMode: String, Codable, CaseIterable, Identifiable {
     case microphone = "切换麦克风", scroll = "滚动", key = "普通按键"
     var id: String { rawValue }
@@ -265,6 +276,8 @@ struct XvicoSettings: Codable, Equatable {
     var speechLanguage = "跟随系统"
     var interceptRemoteButtons = true
     var pointerSensitivity = 1.0
+    var pointerProfile: PointerResponseProfile = .balanced
+    var clickStabilityEnabled = true
     var ringEnabled = true
     var ringAction: RingAction = .scroll
     var ringToggleKey: String = RemoteKey.touchRight.rawValue
@@ -282,7 +295,7 @@ struct XvicoSettings: Codable, Equatable {
     init() {}
     private enum CodingKeys: String, CodingKey {
         case autoSwitchScenes, launchAtLogin, blockPowerActions, touchEnabled, scrollSensitivity, speechLanguage
-        case interceptRemoteButtons, pointerSensitivity, ringEnabled, ringAction, ringToggleKey, wheelStyle, ringSensitivity, ringRadius
+        case interceptRemoteButtons, pointerSensitivity, pointerProfile, clickStabilityEnabled, ringEnabled, ringAction, ringToggleKey, wheelStyle, ringSensitivity, ringRadius
         case volumeKeyMode, volumeScrollStep, showDockIcon, showMenuBarIcon, keepRunningWhenClosed, interfaceLanguage, globalBindings
     }
     init(from decoder: Decoder) throws {
@@ -296,6 +309,8 @@ struct XvicoSettings: Codable, Equatable {
         speechLanguage = try v.decodeIfPresent(String.self, forKey: .speechLanguage) ?? speechLanguage
         interceptRemoteButtons = try v.decodeIfPresent(Bool.self, forKey: .interceptRemoteButtons) ?? blockPowerActions
         pointerSensitivity = try v.decodeIfPresent(Double.self, forKey: .pointerSensitivity) ?? pointerSensitivity
+        pointerProfile = try v.decodeIfPresent(PointerResponseProfile.self, forKey: .pointerProfile) ?? pointerProfile
+        clickStabilityEnabled = try v.decodeIfPresent(Bool.self, forKey: .clickStabilityEnabled) ?? clickStabilityEnabled
         ringEnabled = try v.decodeIfPresent(Bool.self, forKey: .ringEnabled) ?? ringEnabled
         ringAction = try v.decodeIfPresent(RingAction.self, forKey: .ringAction) ?? ringAction
         ringToggleKey = try v.decodeIfPresent(String.self, forKey: .ringToggleKey) ?? ringToggleKey

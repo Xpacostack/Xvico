@@ -8,11 +8,12 @@ struct RemotePointerMotionFilter {
     private var warmupFrames = 2
 
     mutating func reset() { self = Self() }
-    mutating func seed(_ sample: RemoteTouchSample) {
-        previous = sample; filteredX = 0; filteredY = 0; warmupFrames = 2
+    mutating func seed(_ sample: RemoteTouchSample, warmup: Bool = true) {
+        previous = sample; filteredX = 0; filteredY = 0; warmupFrames = warmup ? 2 : 0
     }
 
-    mutating func process(_ sample: RemoteTouchSample, sensitivity: Double) -> (x: Double, y: Double)? {
+    mutating func process(_ sample: RemoteTouchSample, sensitivity: Double,
+                          profile: PointerResponseProfile = .balanced) -> (x: Double, y: Double)? {
         guard sample.touching else { reset(); return nil }
         guard let previous else { seed(sample); return nil }
         self.previous = sample
@@ -37,7 +38,7 @@ struct RemotePointerMotionFilter {
         else if speed < 0.7 { acceleration = 0.65 + (speed - 0.1) / 0.6 * 0.35 }
         else if speed < 2.2 { acceleration = 1 + (speed - 0.7) / 1.5 * 1.2 }
         else { acceleration = 2.2 }
-        let gain = 760 * min(3, max(0.2, sensitivity)) * acceleration
+        let gain = 760 * min(3, max(0.2, sensitivity)) * acceleration * profile.gain(at: speed)
         return (filteredX * gain, -filteredY * gain)
     }
 }

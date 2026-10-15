@@ -220,6 +220,7 @@ struct VoiceView: View {
         SettingsSection(title: "高级诊断", symbol: "slider.horizontal.3") {
             DisclosureGroup("系统语音后端与采集信息") {
                 VStack(alignment: .leading, spacing: XvicoLayout.rowSpacing) {
+                    VoiceLatencyView(voice: voice)
                     XvicoLocalizedText(backend.status).font(.system(size: 12, weight: .semibold))
                     XvicoLocalizedText("Siri Remote 采集仅在你启动时运行，停止后恢复原诊断设置。音频可提供给本机识别和 Xvico Microphone。安装虚拟麦克风不会更改系统默认输入。")
                         .font(XvicoTypography.caption).foregroundStyle(XvicoTheme.secondaryText)
@@ -306,6 +307,35 @@ struct VoiceView: View {
     }
     private func execute(_ command: UserShortcut) {
         model.perform(KeyBinding(action: command.action, value: command.value))
+    }
+}
+
+private struct VoiceLatencyView: View {
+    @ObservedObject var voice: VoiceService
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            XvicoLocalizedText("本轮语音耗时").font(.system(size: 12, weight: .semibold))
+            if voice.latency.began == nil {
+                XvicoLocalizedText("下一次语音输入后显示各阶段耗时。")
+            } else {
+                metric("识别或通道就绪", voice.latency.readyMilliseconds)
+                metric("收到首帧音频", voice.latency.firstAudioMilliseconds)
+                if voice.measuringInputMethod {
+                    XvicoLocalizedText("输入法负责识别和落字，Xvico 不读取其文字或推测识别耗时。")
+                } else {
+                    metric("出现首段文字", voice.latency.firstTextMilliseconds)
+                    metric("松开到最终文字", voice.latency.finalMilliseconds)
+                    metric("写入原输入框", voice.latency.deliveryMilliseconds)
+                }
+            }
+        }.font(XvicoTypography.caption).foregroundStyle(XvicoTheme.secondaryText)
+    }
+    private func metric(_ title: String, _ value: Double?) -> some View {
+        HStack {
+            XvicoLocalizedText(title)
+            Spacer()
+            Text(value.map { String(format: "%.0f ms", $0) } ?? "—").monospacedDigit()
+        }
     }
 }
 
