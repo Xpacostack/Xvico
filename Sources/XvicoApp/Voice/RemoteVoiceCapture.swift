@@ -25,7 +25,34 @@ struct RemoteVoiceIPC {
 }
 
 @MainActor
-final class RemoteVoiceCapture {
+protocol RemoteVoiceCapturing: AnyObject {
+    func start(usePersistentApproval: Bool,
+               onFrame: @escaping (RemoteOpusFrame) -> Void, onStatus: @escaping (String) -> Void,
+               onReady: @escaping () -> Void, onError: @escaping (String) -> Void)
+    func stop()
+}
+
+/// Evaluates startup and post-start health using monotonic time. The ready
+/// marker alone is not proof that the backend is still alive.
+struct RemoteCaptureHealth {
+    enum Action: Equatable { case waiting, running, startReader(String), ended, timedOut }
+    let startedAt: Double
+    var startupTimeout: Double = 150
+    private(set) var readerStarted = false
+
+    mutating func poll(now: Double, backendEnded: Bool, capturePath: String?) -> Action {
+        if backendEnded { return .ended }
+        if readerStarted { return .running }
+        if let path = capturePath, path.hasPrefix("/private/var/tmp/xvibe-voice."), path.hasSuffix("/remote.pklg") {
+            readerStarted = true
+            return .startReader(path)
+        }
+        return now - startedAt >= startupTimeout ? .timedOut : .waiting
+    }
+}
+
+@MainActor
+final class RemoteVoiceCapture: RemoteVoiceCapturing {
     private var session: URL?
     private var authorization: Task<Void, Never>?
     private var polling: Task<Void, Never>?
@@ -83,23 +110,27 @@ final class RemoteVoiceCapture {
             }
         }
         polling = Task { [weak self] in
-            for _ in 0..<600 {
-                try? await Task.sleep(nanoseconds: 250_000_000)
+            var health = RemoteCaptureHealth(startedAt: ProcessInfo.processInfo.systemUptime)
+            while !Task.isCancelled {
+                do { try await Task.sleep(nanoseconds: health.readerStarted ? 1_000_000_000 : 250_000_000) }
+                catch { return }
                 guard !Task.isCancelled, let self, self.generation == token else { return }
-                if FileManager.default.fileExists(atPath: directory.appendingPathComponent("backend-ended").path) {
+                let ended = FileManager.default.fileExists(atPath: directory.appendingPathComponent("backend-ended").path)
+                let data = health.readerStarted ? nil : try? Data(contentsOf: directory.appendingPathComponent("ready.json"))
+                let value = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: String] }
+                switch health.poll(now: ProcessInfo.processInfo.systemUptime, backendEnded: ended, capturePath: value?["capture"]) {
+                case .waiting, .running: break
+                case .ended:
                     self.stop(); onError("语音后台提前结束，请检查蓝牙连接和后台授权"); return
+                case .timedOut:
+                    self.stop(); onError(persistent ? "已授权语音后台启动超时，请检查状态或重新安装后台" : "语音采集尚未启动；取消或未完成管理员批准"); return
+                case .startReader(let path):
+                    guard self.runReader(readerURL, trace: path, token: token, onFrame: onFrame, onError: onError) else { return }
+                    onReady()
+                    guard self.generation == token else { return }
+                    onStatus("等待 Siri Remote 音频；临时采集最多持续一小时")
                 }
-                let ready = directory.appendingPathComponent("ready.json")
-                guard let data = try? Data(contentsOf: ready),
-                      let value = try? JSONSerialization.jsonObject(with: data) as? [String: String],
-                      let path = value["capture"], path.hasPrefix("/private/var/tmp/xvibe-voice."), path.hasSuffix("/remote.pklg") else { continue }
-                guard self.runReader(readerURL, trace: path, token: token, onFrame: onFrame, onError: onError) else { return }
-                onReady()
-                onStatus("等待 Siri Remote 音频；临时采集最多持续一小时")
-                return
             }
-            guard let self, self.generation == token else { return }
-            self.stop(); onError(persistent ? "已授权语音后台启动超时，请检查状态或重新安装后台" : "语音采集尚未启动；取消或未完成管理员批准")
         }
     }
     private func connectService(directory: URL, token: UUID, onError: @escaping (String) -> Void) -> Bool {
@@ -145,7 +176,12 @@ final class RemoteVoiceCapture {
             guard !data.isEmpty else { return }
             Task { @MainActor [weak self] in
                 guard let self, self.generation == token else { return }
-                do { for frame in try self.parser.ingest(data) { onFrame(frame) } }
+                do {
+                    for frame in try self.parser.ingest(data) {
+                        guard self.generation == token else { return }
+                        onFrame(frame)
+                    }
+                }
                 catch { self.stop(); onError(error.localizedDescription) }
             }
         }

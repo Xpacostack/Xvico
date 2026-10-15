@@ -6,11 +6,13 @@
 
 Xvico is a macOS companion for Siri Remote, with customizable controls and voice input. Move the pointer, scroll conversations and code, switch apps or tasks, and assign different button mappings to each app. For dictation, route audio from your Mac or Siri Remote to on-device recognition or your preferred input method.
 
+Beta.5 adds [unified configuration and hot reload](docs/configuration.md), click stabilization and drag acceleration, and improves key releases, voice lifecycle and remote reconnection. [See what changed](docs/releases/1.0.0-beta.5.md).
+
 ![Xvico Function Mapping with a rotatable 3D Siri Remote](docs/screenshots/mapping-en.png)
 
 ## Download and install
 
-**[Download Xvico 1.0.0-beta.4 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.4/Xvico-1.0.0-beta.4-macos-arm64.dmg)** · [Alternative ZIP](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.4/Xvico-1.0.0-beta.4-macos-arm64.zip) · [Release notes and SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.4)
+**[Download Xvico 1.0.0-beta.5 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.5/Xvico-1.0.0-beta.5-macos-arm64.dmg)** · [Alternative ZIP](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.5/Xvico-1.0.0-beta.5-macos-arm64.zip) · [Release notes and SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.5)
 
 - **Apple Silicon (M1 or later), macOS 13 or later.** This build does not support Intel Macs.
 - Open the DMG, drag **Xvico** to **Applications**, then open it from Applications.
@@ -113,6 +115,8 @@ python3 scripts/check-release.py
 
 Software tests cover mappings, scene switching, input directions, voice routing, malformed input and related logic. Remote reconnection, repeated voice sessions and behavior across input methods still require hardware acceptance testing.
 
+See [Voice lifecycle and recovery](docs/voice-lifecycle.md) for behavior and the hardware acceptance checklist. Repeated voice input and reconnection have passed hardware acceptance; real sleep/wake testing remains pending.
+
 - [Architecture](docs/ARCHITECTURE.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security reporting](SECURITY.md)
@@ -123,4 +127,4 @@ Software tests cover mappings, scene switching, input directions, voice routing,
 
 The project's own licensable material is offered under the [Xvico Source Available License 1.0](LICENSE). This is a source-available license, not an OSI open-source license. Third-party GPL, Opus and other components retain their own licenses; the root commercial terms do not replace those rights. See [Commercial licensing](COMMERCIAL_LICENSE.md) and [Third-party notices](THIRD_PARTY_NOTICES.md).
 
-For questions, suggestions and commercial licensing inquiries, use the developer contact QR code under **Device Settings → Contact the Developer** in the app.
+For questions, suggestions and commercial licensing inquiries, use the WeChat QR code under **Device Settings → Contact the Developer** in the app, or contact Telegram [@heitonk](https://t.me/heitonk).

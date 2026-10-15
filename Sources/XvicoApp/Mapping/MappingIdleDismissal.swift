@@ -7,6 +7,7 @@ final class MappingIdleDismissal: ObservableObject {
     typealias Scheduler = (TimeInterval, @escaping () -> Void) -> () -> Void
     private let now: () -> TimeInterval
     private let schedule: Scheduler
+    private let systemInteracting: @MainActor () -> Bool
     private var cancelPending: (() -> Void)?
     private var deadline = 0.0
     private var eventMonitor: Any?
@@ -23,8 +24,14 @@ final class MappingIdleDismissal: ObservableObject {
                  fire()
              }
              return { task.cancel() }
+         },
+         systemInteracting: @escaping @MainActor () -> Bool = {
+             let pressed = NSEvent.pressedMouseButtons != 0
+             let modal = NSApp?.modalWindow != nil
+             return pressed || modal
          }) {
         self.timeout = timeout; self.now = now; self.schedule = schedule
+        self.systemInteracting = systemInteracting
     }
 
     func begin(isInteracting: @escaping () -> Bool = { false }, onDismiss: @escaping () -> Void) {
@@ -60,7 +67,7 @@ final class MappingIdleDismissal: ObservableObject {
             if remaining > 0 { self.arm(after: remaining); return }
             // Finish a held drag or modal app picker before starting another
             // idle interval; never tear down a control under an active press.
-            if NSEvent.pressedMouseButtons != 0 || NSApp?.modalWindow != nil || self.isInteracting?() == true {
+            if self.systemInteracting() || self.isInteracting?() == true {
                 self.recordActivity()
                 return
             }

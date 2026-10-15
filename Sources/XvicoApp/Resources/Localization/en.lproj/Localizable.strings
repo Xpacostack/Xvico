@@ -684,3 +684,37 @@
 "拖动加速" = "Drag acceleration";
 
 "仅在按住鼠标映射键拖动时生效：慢移保持精准，快滑增加距离；设为 1× 恢复原有拖动速度。" = "Applies only while holding a mouse-mapped button: slow movement stays precise, faster swipes travel farther. Set to 1× for the original drag speed.";
+
+"配置文件" = "Configuration file";
+
+"配置已同步" = "Configuration synced";
+
+"新配置已读取，松开按键和触控后生效。" = "New configuration loaded; release all buttons and the touch surface to apply it.";
+
+"配置文件无效，继续使用最近有效配置。修正文件后会自动重载。" = "Invalid configuration file. The last valid configuration remains active; fixing the file reloads it automatically.";
+
+"配置版本不受支持，继续使用最近有效配置。" = "Unsupported configuration version. The last valid configuration remains active.";
+
+"文件与界面均有改动，尚未覆盖文件。请选择要使用的版本。" = "Both the file and the interface have changes. The file has not been overwritten; choose which version to use.";
+
+"配置文件已移走，当前设置仍有效。可重新保存当前配置。" = "The configuration file was moved or removed. Current settings remain active; save them again to recreate it.";
+
+"配置未能保存，当前设置仍有效。请检查配置目录的写入权限。" = "Could not save the configuration. Current settings remain active; check write access to the configuration directory.";
+
+"界面与文件使用同一份设置，保存有效 JSON 后自动生效。权限和语音授权独立保存在本机。" = "The interface and file share the same settings. Saving valid JSON applies changes automatically. Permissions and voice authorization are stored separately on this Mac.";
+
+"打开配置文件夹" = "Open configuration folder";
+
+"使用文件配置" = "Use file configuration";
+
+"保存当前配置" = "Save current configuration";
+
+"恢复未保存配置" = "Recover unsaved configuration";
+
+"有未保存的配置副本，可在「配置文件」中恢复。" = "An unsaved configuration copy is available under Configuration file.";
+
+// Voice lifecycle interruption guidance
+"系统睡眠已停止语音；唤醒后请重新启动系统语音后端" = "Sleep stopped voice capture. Start the system voice backend again after waking.";
+"遥控器输入连接已中断；连接恢复后请重新启动系统语音后端" = "The remote input connection was interrupted. Start the system voice backend again after reconnecting.";
+
+"通过 Telegram 联系开发者" = "Contact the developer on Telegram";

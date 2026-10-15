@@ -20,7 +20,7 @@ private final class IdleTestClock {
         }
     }
     func timer(_ timeout: Double = 10) -> MappingIdleDismissal {
-        MappingIdleDismissal(timeout: timeout, now: { self.now }, schedule: schedule)
+        MappingIdleDismissal(timeout: timeout, now: { self.now }, schedule: schedule, systemInteracting: { false })
     }
 }
 
@@ -84,7 +84,7 @@ final class MappingIdleDismissalTests: XCTestCase {
     }
 
     func testProductionSchedulerActuallyFires() async {
-        let timer = MappingIdleDismissal(timeout: 0.02)
+        let timer = MappingIdleDismissal(timeout: 0.02, systemInteracting: { false })
         defer { timer.stop() }
         let closed = expectation(description: "Real scheduler fires")
         timer.begin { closed.fulfill() }

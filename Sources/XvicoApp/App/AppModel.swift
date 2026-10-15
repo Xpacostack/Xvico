@@ -6,7 +6,9 @@ import Foundation
 final class AppModel: ObservableObject {
     @Published var page: XvicoPage = .mapping
     @Published var scenes: [XvicoScene] = [] { didSet { persist() } }
-    @Published var selectedSceneID: UUID? { didSet { persist() } }
+    @Published var selectedSceneID: UUID? { didSet {
+        if !restoring { defaults.set(selectedSceneID?.uuidString, forKey: "xvibe.selectedScene") }
+    } }
     @Published var selectedKey: RemoteKey?
     @Published var editingGlobalMapping = true
     @Published private(set) var manuallyActiveSceneID: UUID?
@@ -34,7 +36,11 @@ final class AppModel: ObservableObject {
         set { inputDiagnostics.recordAction(newValue) }
     }
     @Published var isLearning = false
-    @Published var learnedUsages: [String: String] = [:]
+    @Published var learnedUsages: [String: String] = [:] { didSet { persist() } }
+    @Published private(set) var configurationState: ConfigurationSyncState = .synced
+    @Published private(set) var hasRecoverableConfiguration = false
+    var configurationFileURL: URL? { configurationStore?.fileURL }
+    var configurationNeedsResolution: Bool { configurationState != .synced && configurationState != .waitingForRelease }
     @Published var siriPressBehavior = "分段模式"
     @Published var siriLongBehavior = "语音识别"
     @Published var siriDoubleEnabled = true
@@ -50,26 +56,25 @@ final class AppModel: ObservableObject {
     private let voiceTextDelivery: any VoiceTextDelivering
     private let microphoneSwitcher: (Int) throws -> String
     private var restoring = true
+    private var configurationStore: ConfigurationStore?
+    private var configurationTimer: Timer?
+    private var configurationDirty = false
+    private var pendingExternalConfiguration: AppConfiguration?
     private var sceneObserver: NSObjectProtocol?
-    let remoteVoice = RemoteVoiceService()
-    private let inputMonitor = RemoteInputMonitor()
-    private var pressTasks: [RemoteKey: Task<Void, Never>] = [:]
-    private var singleTapTasks: [RemoteKey: Task<Void, Never>] = [:]
-    private var lastTap: [RemoteKey: Date] = [:]
-    private var pressedBindings: [RemoteKey: KeyBinding] = [:]
-    private var heldBindings: [RemoteKey: KeyBinding] = [:]
-    private var heldMouseBindings: [RemoteKey: MouseClickButton] = [:]
+    let remoteVoice: RemoteVoiceService
+    private let inputMonitor: any RemoteInputMonitoring
+    private(set) var systemSleeping = false
+    private var buttonState = RemoteButtonStateMachine()
+    private var buttonTasks: [RemoteButtonStateMachine.TimerID: Task<Void, Never>] = [:]
+    private var physicalKeysDown = Set<RemoteKey>()
     var siriVoiceHandler: ((Bool) -> Bool)?
     var mappedKeyboardHandler: ((KeyBinding, Bool) -> Void)?
     var controlStopped: (() -> Void)?
     private var siriVoiceConsumed = false
-    var isHoldingRemoteButton: Bool { !pressedBindings.isEmpty || siriVoiceConsumed || !ringToggleSuppressed.isEmpty }
+    var isHoldingRemoteButton: Bool { !physicalKeysDown.isEmpty || buttonState.isHolding || siriVoiceConsumed }
     private var centerMouseSequence = MouseClickSequence()
     private var mouseClickCounts: [MouseClickButton: Int64] = [:]
     private let mouseClickTime: () -> Double
-    private var holdDidFire = Set<RemoteKey>()
-    private var ringToggleLastTap: Date?
-    private var ringToggleSuppressed = Set<RemoteKey>()
     private var gestureProcessor = RemoteGestureProcessor()
     private var pointerTarget: CGPoint?
     private var clickStabilizer = PointerClickStabilizer()
@@ -87,7 +92,12 @@ final class AppModel: ObservableObject {
          eventPoster: @escaping (CGEvent) -> Void = { $0.post(tap: .cghidEventTap) },
          microphoneSwitcher: @escaping (Int) throws -> String = MacMicrophones.switchInput,
          mouseClickTime: @escaping () -> Double = { Date.timeIntervalSinceReferenceDate },
-         voiceTextDelivery: (any VoiceTextDelivering)? = nil) {
+         voiceTextDelivery: (any VoiceTextDelivering)? = nil,
+         configurationDirectory: URL? = nil,
+         inputMonitor: (any RemoteInputMonitoring)? = nil,
+         remoteVoice: RemoteVoiceService? = nil) {
+        self.inputMonitor = inputMonitor ?? RemoteInputMonitor()
+        self.remoteVoice = remoteVoice ?? RemoteVoiceService()
         self.defaults = defaults
         self.voiceTextDelivery = voiceTextDelivery ?? VoiceTextDelivery()
         self.accessibilityCheck = accessibilityCheck
@@ -95,25 +105,52 @@ final class AppModel: ObservableObject {
         self.realKeyboardTiming = observeSystem
         self.microphoneSwitcher = microphoneSwitcher
         self.mouseClickTime = mouseClickTime
+        let legacyArchive = defaults.dictionaryRepresentation().filter {
+            ["xvibe.settings", "xvibe.scenes", "xvibe.shortcuts", "xvibe.learnedUsages", "xvibe.selectedScene"].contains($0.key)
+        }
         restore()
         migrateLegacyMappingDefaults()
+        if observeSystem || configurationDirectory != nil {
+            let store = ConfigurationStore(directory: configurationDirectory ?? ConfigurationStore.defaultDirectory)
+            configurationStore = store
+            let (value, failure) = store.bootstrap(fallback: configurationSnapshot, legacyArchive: legacyArchive)
+            installConfiguration(value, external: false)
+            configurationState = failure.map(ConfigurationSyncState.init) ?? .synced
+            hasRecoverableConfiguration = FileManager.default.fileExists(atPath: store.unsavedURL.path)
+        }
         restoring = false
-        persist()
+        if configurationState == .synced { persist() }
+        if observeSystem {
+            let timer = Timer(timeInterval: 0.75, repeats: true) { [weak self] _ in
+                Task { @MainActor [weak self] in self?.refreshConfiguration() }
+            }
+            configurationTimer = timer
+            RunLoop.main.add(timer, forMode: .common)
+        }
         for name in observeSystem ? [NSWorkspace.screensDidSleepNotification, NSWorkspace.screensDidWakeNotification] : [] {
             displayObservers.append(NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
                 let sleeping = note.name == NSWorkspace.screensDidSleepNotification
                 Task { @MainActor [weak self] in self?.screenSleeping = sleeping }
             })
         }
-        inputMonitor.onStatus = { [weak self] in self?.remoteStatus = $0 }
-        inputMonitor.onDiagnostic = { [weak self] message in
+        for name in observeSystem ? [NSWorkspace.willSleepNotification, NSWorkspace.didWakeNotification] : [] {
+            displayObservers.append(NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                let sleeping = note.name == NSWorkspace.willSleepNotification
+                Task { @MainActor [weak self] in
+                    if sleeping { self?.handleSystemSleep() } else { self?.handleSystemWake() }
+                }
+            })
+        }
+        self.inputMonitor.onStatus = { [weak self] in self?.remoteStatus = $0 }
+        self.inputMonitor.onInputLost = { [weak self] in self?.handleRemoteInputLoss() }
+        self.inputMonitor.onDiagnostic = { [weak self] message in
             self?.inputDiagnostics.buttonCount += 1
             self?.inputDiagnostics.lastButton = message
         }
-        inputMonitor.onUsage = { [weak self] page, usage, pressed in
+        self.inputMonitor.onUsage = { [weak self] page, usage, pressed in
             self?.handleHIDUsage(page: page, usage: usage, pressed: pressed)
         }
-        inputMonitor.onTouch = { [weak self] sample in
+        self.inputMonitor.onTouch = { [weak self] sample in
             guard let self else { return }
             self.touchSamplesReceived += 1
             let now = ProcessInfo.processInfo.systemUptime
@@ -126,9 +163,9 @@ final class AppModel: ObservableObject {
             self.lastTouchWasActive = sample.touching
             self.handleTouch(sample)
         }
-        inputMonitor.onTouchStatus = { [weak self] status in self?.touchStatus = status }
-        inputMonitor.onInterception = { [weak self] intercepted in self?.powerIntercepted = intercepted }
-        inputMonitor.onInterceptionDetail = { [weak self] in self?.powerInterceptionDetail = $0 }
+        self.inputMonitor.onTouchStatus = { [weak self] status in self?.touchStatus = status }
+        self.inputMonitor.onInterception = { [weak self] intercepted in self?.powerIntercepted = intercepted }
+        self.inputMonitor.onInterceptionDetail = { [weak self] in self?.powerInterceptionDetail = $0 }
         if observeSystem { sceneObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification,
             object: nil,
@@ -152,6 +189,7 @@ final class AppModel: ObservableObject {
     }
 
     deinit {
+        configurationTimer?.invalidate()
         if let sceneObserver { NSWorkspace.shared.notificationCenter.removeObserver(sceneObserver) }
         for observer in displayObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
     }
@@ -418,6 +456,7 @@ final class AppModel: ObservableObject {
 
     func startControl() {
         running = true
+        guard !systemSleeping else { return }
         inputMonitor.start(interceptButtons: settings.interceptRemoteButtons)
         if remoteStatus == "尚未连接" { remoteStatus = "等待 Siri Remote 连接" }
     }
@@ -436,6 +475,7 @@ final class AppModel: ObservableObject {
         running = false
         controlStopped?()
         clearMappingInputState()
+        applyPendingConfigurationIfIdle()
         inputMonitor.stop()
         remoteVoice.stop()
         remoteStatus = "控制已停止"
@@ -449,21 +489,47 @@ final class AppModel: ObservableObject {
         endAppSwitcher()
         gestureProcessor = RemoteGestureProcessor()
         pointerTarget = nil
-        for task in pressTasks.values { task.cancel() }
-        for task in singleTapTasks.values { task.cancel() }
-        for held in heldBindings.values { _ = sendKeyboard(held, down: false) }
-        for button in heldMouseBindings.values { sendMouseButton(button, down: false) }
-        heldMouseBindings.removeAll()
+        executeButtonEffects(buttonState.reset())
+        for task in buttonTasks.values { task.cancel() }
+        buttonTasks.removeAll()
+        physicalKeysDown.removeAll()
         centerMouseSequence = MouseClickSequence(); mouseClickCounts.removeAll()
-        pressTasks.removeAll(); singleTapTasks.removeAll(); pressedBindings.removeAll(); heldBindings.removeAll(); holdDidFire.removeAll(); lastTap.removeAll()
-        ringToggleSuppressed.removeAll(); ringToggleLastTap = nil
+    }
+
+    func handleRemoteInputLoss() {
+        // A disconnected device cannot send its matching key/touch releases.
+        // Release only output owned by this model, then permit a pending reload.
+        remoteVoice.interrupt(systemSleeping
+            ? "系统睡眠已停止语音；唤醒后请重新启动系统语音后端"
+            : "遥控器输入连接已中断；连接恢复后请重新启动系统语音后端") {
+                controlStopped?()
+                clearMappingInputState()
+            }
+        applyPendingConfigurationIfIdle()
+    }
+
+    func handleSystemSleep() {
+        guard !systemSleeping else { return }
+        systemSleeping = true
+        handleRemoteInputLoss()
+        inputMonitor.stop()
+    }
+
+    func handleSystemWake() {
+        guard systemSleeping else { return }
+        systemSleeping = false
+        // Resume only HID discovery if control was enabled. Recording requires
+        // a fresh explicit start; saved authorization and mappings stay intact.
+        if running {
+            remoteStatus = "等待 Siri Remote 连接"
+            inputMonitor.start(interceptButtons: settings.interceptRemoteButtons)
+        }
     }
 
     func handleHIDUsage(page: Int, usage: Int, pressed: Bool) {
         let identity = "\(page):\(usage)"
         if isLearning, pressed, let key = selectedKey {
             learnedUsages[identity] = key.rawValue
-            defaults.set(learnedUsages, forKey: "xvibe.learnedUsages")
             isLearning = false
             show("已将 HID \(identity) 绑定到「\(key.rawValue)」")
             return
@@ -562,10 +628,16 @@ final class AppModel: ObservableObject {
         return true
     }
 
-    // Short tap, held key, and double tap have distinct output paths. Releases
-    // always use the binding captured at press time, even after an app switch.
+    // The recognizer owns captured mappings and gesture timers. Voice remains
+    // a separate gate; every physical down/up pair enters it at most once.
     func handleRemotePress(_ key: RemoteKey, pressed: Bool) {
-        guard running else { return }
+        guard running, !systemSleeping else { return }
+        if pressed {
+            guard physicalKeysDown.insert(key).inserted else { return }
+        } else {
+            guard physicalKeysDown.remove(key) != nil else { return }
+        }
+        defer { applyPendingConfigurationIfIdle() }
         mappingInteraction.send()
         if key == .voice {
             if siriVoiceConsumed {
@@ -579,95 +651,52 @@ final class AppModel: ObservableObject {
             }
             if !pressed { _ = siriVoiceHandler?(false) }
         }
-        if ringToggleSuppressed.contains(key) {
-            if !pressed { ringToggleSuppressed.remove(key) }
-            return
-        }
-        if pressed && pressedBindings[key] == nil && key.rawValue == settings.ringToggleKey, let previous = ringToggleLastTap, Date().timeIntervalSince(previous) <= 0.2 {
-            ringToggleLastTap = nil
-            ringToggleSuppressed.insert(key)
-            cycleRingAction()
-            return
-        }
-        if key == .volumeUp || key == .volumeDown, settings.volumeKeyMode != .key {
-            guard pressed else { return }
-            if settings.volumeKeyMode == .microphone {
-                do { lastAction = "麦克风：" + (try microphoneSwitcher(key == .volumeUp ? -1 : 1)) }
-                catch { show(error.localizedDescription) }
-            } else {
-                guard accessibilityCheck() else { show("请授予 Xvico 辅助功能权限"); return }
-                postScroll(Int32(settings.volumeScrollStep) * (key == .volumeUp ? 1 : -1), pixels: true)
-            }
-            return
-        }
+        let effects: [RemoteButtonStateMachine.Effect]
         if pressed {
-            guard pressedBindings[key] == nil else { return }
-            let binding = runtimeBinding(for: key)
-            guard binding.enabled else {
+            let context = RemoteButtonStateMachine.Context(application: currentBundleID, scene: activeScene?.id,
+                ringToggleKey: settings.ringToggleKey, volumeMode: settings.volumeKeyMode,
+                volumeScrollStep: settings.volumeScrollStep)
+            effects = buttonState.press(key, binding: runtimeBinding(for: key), context: context,
+                                        now: ProcessInfo.processInfo.systemUptime)
+        } else {
+            effects = buttonState.release(key, now: ProcessInfo.processInfo.systemUptime)
+        }
+        executeButtonEffects(effects)
+    }
+
+    private func executeButtonEffects(_ effects: [RemoteButtonStateMachine.Effect]) {
+        for effect in effects {
+            switch effect {
+            case .keyboard(let binding, let down): _ = sendKeyboard(binding, down: down)
+            case .mouse(let button, let down, let key):
+                if key == .center {
+                    if down && settings.clickStabilityEnabled { clickStabilizer.press(at: latestTouchSample) }
+                    else if !down { clickStabilizer.release(at: latestTouchSample) }
+                }
+                sendMouseButton(button, down: down, key: down ? key : nil)
+            case .tap(let binding, let key): dispatchTap(binding, key: key)
+            case .disabled(let key):
                 show("\(key.displayName)在当前映射中已停用")
                 recordOutput("按键映射已停用", value: key.displayName, sent: false)
-                return
-            }
-            pressedBindings[key] = binding
-            let doubleTap = binding.doubleClickEnabled && (key == .power || (key == .voice && binding.action == .key && binding.siriMode == "分段模式"))
-            if binding.action == .click && !doubleTap {
-                heldMouseBindings[key] = binding.mouseButton
-                if key == .center && settings.clickStabilityEnabled { clickStabilizer.press(at: latestTouchSample) }
-                sendMouseButton(binding.mouseButton, down: true, key: key)
-                return
-            }
-            if binding.action == .key && ((key == .voice && binding.siriMode == "长按模式") || (!binding.longPressEnabled && !doubleTap)) {
-                heldBindings[key] = binding
-                _ = sendKeyboard(binding, down: true)
-                return
-            }
-            if binding.longPressEnabled && binding.action == .key {
-                pressTasks[key] = Task { [weak self] in
-                    try? await Task.sleep(nanoseconds: 350_000_000)
-                    guard !Task.isCancelled, let self, self.pressedBindings[key] != nil else { return }
-                    self.holdDidFire.insert(key)
-                    if !binding.holdNoOutput {
-                        var held = KeyBinding(action: .key, value: binding.longPressValue.isEmpty ? "F1" : binding.longPressValue, modifiers: binding.longPressModifiers)
-                        held.rightModifiers = binding.longPressRightModifiers
-                        self.heldBindings[key] = held
-                        _ = self.sendKeyboard(held, down: true)
-                    }
+            case .switchMicrophone(let direction):
+                do { lastAction = "麦克风：" + (try microphoneSwitcher(direction)) }
+                catch { show(error.localizedDescription) }
+            case .scroll(let distance):
+                guard accessibilityCheck() else { show("请授予 Xvico 辅助功能权限"); continue }
+                postScroll(distance, pixels: true)
+            case .cycleRing: cycleRingAction()
+            case .cancel(let timer): buttonTasks.removeValue(forKey: timer)?.cancel()
+            case .schedule(let timer, let delay):
+                buttonTasks.removeValue(forKey: timer)?.cancel()
+                buttonTasks[timer] = Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    guard !Task.isCancelled, let self else { return }
+                    self.buttonTasks.removeValue(forKey: timer)
+                    let effects = self.buttonState.timerFired(timer, now: ProcessInfo.processInfo.systemUptime)
+                    self.executeButtonEffects(effects)
+                    self.applyPendingConfigurationIfIdle()
                 }
             }
-        } else {
-            guard let binding = pressedBindings.removeValue(forKey: key) else { return }
-            if key.rawValue == settings.ringToggleKey { ringToggleLastTap = Date() }
-            if let button = heldMouseBindings.removeValue(forKey: key) {
-                if key == .center { clickStabilizer.release(at: latestTouchSample) }
-                sendMouseButton(button, down: false)
-                return
-            }
-            pressTasks.removeValue(forKey: key)?.cancel()
-            if let held = heldBindings.removeValue(forKey: key) { _ = sendKeyboard(held, down: false); holdDidFire.remove(key); return }
-            if holdDidFire.remove(key) != nil { return }
-            if binding.doubleClickEnabled && (key == .power || (key == .voice && binding.action == .key && binding.siriMode == "分段模式")) {
-                let now = Date()
-                if let previous = lastTap[key], now.timeIntervalSince(previous) <= 0.2 {
-                    singleTapTasks.removeValue(forKey: key)?.cancel()
-                    lastTap[key] = nil
-                    if key == .power {
-                        let action: XvicoAction = binding.powerDoubleClickAction == .lockScreen ? .lockScreen : binding.powerDoubleClickAction == .systemSleep ? .systemSleep : .screenOff
-                        perform(KeyBinding(action: action, value: ""))
-                    } else {
-                        var double = KeyBinding(action: .key, value: binding.doubleClickValue.isEmpty ? "Return" : binding.doubleClickValue, modifiers: binding.doubleClickModifiers)
-                        double.rightModifiers = binding.doubleClickRightModifiers
-                        perform(double)
-                    }
-                } else {
-                    lastTap[key] = now
-                    singleTapTasks[key] = Task { [weak self] in
-                        try? await Task.sleep(nanoseconds: 200_000_000)
-                        guard !Task.isCancelled, let self else { return }
-                        self.lastTap[key] = nil
-                        self.dispatchTap(binding, key: key)
-                    }
-                }
-            } else { dispatchTap(binding, key: key) }
         }
     }
 
@@ -696,7 +725,8 @@ final class AppModel: ObservableObject {
         if running { inputMonitor.reidentifyTouch() }
     }
     func handleTouch(_ sample: RemoteTouchSample) {
-        guard running else { return }
+        guard running, !systemSleeping else { return }
+        defer { applyPendingConfigurationIfIdle() }
         latestTouchSample = sample
         if sample.touching { mappingInteraction.send() }
         if !sample.touching || !settings.touchEnabled { pointerTarget = nil }
@@ -705,7 +735,7 @@ final class AppModel: ObservableObject {
         if !settings.clickStabilityEnabled { clickStabilizer.reset() }
         let outputs = gestureProcessor.process(sample, settings: touchSettings, mode: effectiveRingAction,
                                               pointerPaused: clickStabilizer.suppresses(sample),
-                                              dragging: !heldMouseBindings.isEmpty)
+                                              dragging: !buttonState.heldMouseButtons.isEmpty)
         // Resting fingers, contact acquisition and filtered noise have no
         // events to post. Avoid a system trust query on those hardware frames.
         guard !outputs.isEmpty else { return }
@@ -719,7 +749,7 @@ final class AppModel: ObservableObject {
                 point.x += dx; point.y += dy
                 point = clampPointerToDisplay(point)
                 pointerTarget = point
-                let held = heldMouseBindings.values.first
+                let held = buttonState.heldMouseButtons.first
                 let type: CGEventType = held == .right ? .rightMouseDragged : held == .middle ? .otherMouseDragged : held == .left ? .leftMouseDragged : .mouseMoved
                 let button: CGMouseButton = held == .right ? .right : held == .middle ? .center : .left
                 if let event = CGEvent(mouseEventSource: scrollEventSource, mouseType: type, mouseCursorPosition: point, mouseButton: button) {
@@ -881,10 +911,136 @@ final class AppModel: ObservableObject {
 
     private func persist() {
         guard !restoring else { return }
-        defaults.set(try? JSONEncoder().encode(scenes), forKey: "xvibe.scenes")
+        let value = configurationSnapshot
+        if let store = configurationStore {
+            // Selection-only changes do not rewrite the behavior file. Never
+            // overwrite a pending external version with an in-flight GUI edit.
+            if value != store.accepted || configurationDirty || pendingExternalConfiguration != nil {
+                do {
+                    guard pendingExternalConfiguration == nil else { throw ConfigurationFailure.conflict }
+                    try store.save(value)
+                    configurationDirty = false
+                    hasRecoverableConfiguration = false
+                    setConfigurationState(.synced)
+                } catch {
+                    configurationDirty = true
+                    hasRecoverableConfiguration = store.preserveUnsaved(value)
+                    setConfigurationState(.init((error as? ConfigurationFailure) ?? .io))
+                    return
+                }
+            }
+        }
+        mirrorLegacyConfiguration(value)
+    }
+
+    private var configurationSnapshot: AppConfiguration {
+        .init(settings: settings, scenes: scenes, shortcuts: shortcuts, learnedUsages: learnedUsages)
+    }
+
+    private func mirrorLegacyConfiguration(_ value: AppConfiguration) {
+        // Encode every component first. A failed encode must never remove a
+        // previously saved UserDefaults value. These keys are rollback mirrors;
+        // a file-backed runtime always restores from the versioned document.
+        guard let sceneData = try? JSONEncoder().encode(value.scenes),
+              let shortcutData = try? JSONEncoder().encode(value.shortcuts),
+              let settingData = try? JSONEncoder().encode(value.settings) else { return }
+        defaults.set(sceneData, forKey: "xvibe.scenes")
         defaults.set(selectedSceneID?.uuidString, forKey: "xvibe.selectedScene")
-        defaults.set(try? JSONEncoder().encode(shortcuts), forKey: "xvibe.shortcuts")
-        defaults.set(try? JSONEncoder().encode(settings), forKey: "xvibe.settings")
+        defaults.set(shortcutData, forKey: "xvibe.shortcuts")
+        defaults.set(settingData, forKey: "xvibe.settings")
+        defaults.set(value.learnedUsages, forKey: "xvibe.learnedUsages")
+    }
+
+    private func setConfigurationState(_ value: ConfigurationSyncState) {
+        if configurationState != value { configurationState = value }
+    }
+
+    func refreshConfiguration() {
+        guard let store = configurationStore, !configurationDirty else { return }
+        do {
+            if let value = try store.reload() {
+                pendingExternalConfiguration = value
+                setConfigurationState(.waitingForRelease)
+            }
+            applyPendingConfigurationIfIdle()
+        } catch { setConfigurationState(.init((error as? ConfigurationFailure) ?? .io)) }
+    }
+
+    private func applyPendingConfigurationIfIdle() {
+        guard !configurationDirty, let value = pendingExternalConfiguration,
+              !isHoldingRemoteButton, !buttonState.hasPendingTap,
+              latestTouchSample?.touching != true, !appSwitcherHeld else { return }
+        pendingExternalConfiguration = nil
+        installConfiguration(value, external: true)
+        mirrorLegacyConfiguration(value)
+        setConfigurationState(.synced)
+    }
+
+    private func installConfiguration(_ value: AppConfiguration, external: Bool) {
+        let wasRestoring = restoring
+        let interceptionChanged = settings.interceptRemoteButtons != value.settings.interceptRemoteButtons
+        if external { clearMappingInputState() }
+        restoring = true
+        settings = value.settings
+        scenes = value.scenes
+        shortcuts = value.shortcuts
+        learnedUsages = value.learnedUsages
+        if !scenes.contains(where: { $0.id == selectedSceneID }) { selectedSceneID = scenes.first?.id }
+        if external {
+            manuallyActiveSceneID = nil
+            selectedKey = nil
+            mappingRestoreSnapshot = nil
+            defaults.removeObject(forKey: "xvico.mappingRestoreSnapshot")
+        }
+        restoring = wasRestoring
+        if external && running && interceptionChanged { inputMonitor.setButtonInterception(settings.interceptRemoteButtons) }
+    }
+
+    func useFileConfiguration() {
+        guard let store = configurationStore else { return }
+        do {
+            let value = try store.reload() ?? store.accepted
+            guard let value else { throw ConfigurationFailure.invalid }
+            if configurationDirty { hasRecoverableConfiguration = store.preserveUnsaved(configurationSnapshot) }
+            configurationDirty = false
+            pendingExternalConfiguration = value
+            setConfigurationState(.waitingForRelease)
+            applyPendingConfigurationIfIdle()
+        } catch { setConfigurationState(.init((error as? ConfigurationFailure) ?? .io)) }
+    }
+
+    func saveCurrentConfiguration() {
+        guard let store = configurationStore else { return }
+        do {
+            try store.save(configurationSnapshot, replacingExternal: true)
+            configurationDirty = false
+            hasRecoverableConfiguration = false
+            pendingExternalConfiguration = nil
+            mirrorLegacyConfiguration(configurationSnapshot)
+            setConfigurationState(.synced)
+        } catch {
+            configurationDirty = true
+            hasRecoverableConfiguration = store.preserveUnsaved(configurationSnapshot)
+            setConfigurationState(.init((error as? ConfigurationFailure) ?? .io))
+        }
+    }
+
+    func recoverUnsavedConfiguration() {
+        guard let store = configurationStore else { return }
+        do {
+            let value = try store.readUnsaved()
+            try store.save(value, replacingExternal: true)
+            configurationDirty = false
+            hasRecoverableConfiguration = false
+            pendingExternalConfiguration = value
+            setConfigurationState(.waitingForRelease)
+            applyPendingConfigurationIfIdle()
+        } catch { setConfigurationState(.init((error as? ConfigurationFailure) ?? .io)) }
+    }
+
+    func revealConfiguration() {
+        guard let url = configurationStore?.directory else { return }
+        NSWorkspace.shared.open(url)
     }
 
     private func restore() {

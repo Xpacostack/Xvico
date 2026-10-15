@@ -269,16 +269,7 @@ struct VoiceView: View {
     }
 
     private func startCapture(usePersistentApproval: Bool = true) {
-        voice.stop(); remoteVoice.stop()
-        Task {
-            let service = voice; let channel = remoteVoice
-            if service.recognitionMode == .local && !service.remotePushToTalk {
-                await service.startRemote(stop: { [weak channel] in channel?.stop() })
-                guard service.isListening else { return }
-            }
-            channel.startCapture(usePersistentApproval: usePersistentApproval, audio: { [weak service] in service?.appendRemoteAudio($0) },
-                                 failure: { [weak service] in service?.remoteFailed($0) })
-        }
+        voice.startRemoteChannel(model: model, usePersistentApproval: usePersistentApproval)
     }
 
     private func toggleListening() {

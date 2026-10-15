@@ -6,11 +6,13 @@
 
 Xvico 是面向 macOS 的 Siri Remote 控制与语音输入工具。用遥控器移动指针、滚动对话和代码、切换应用或任务，并为每个 App 配置独立按键映射；需要说话时，可将 Mac 或遥控器麦克风的声音交给本机识别或输入法。
 
+beta.5 新增[统一配置与热重载](docs/configuration.md)、点击稳定与拖动加速，并完善按键释放、语音启停和遥控器重连恢复。[查看本次更新](docs/releases/1.0.0-beta.5.md)。
+
 ![Xvico 功能映射主页与可旋转的 3D Siri Remote](docs/screenshots/mapping-zh.png)
 
 ## 下载安装
 
-**[下载 Xvico 1.0.0-beta.4 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.4/Xvico-1.0.0-beta.4-macos-arm64.dmg)** · [ZIP 备用包](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.4/Xvico-1.0.0-beta.4-macos-arm64.zip) · [版本说明与 SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.4)
+**[下载 Xvico 1.0.0-beta.5 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.5/Xvico-1.0.0-beta.5-macos-arm64.dmg)** · [ZIP 备用包](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.5/Xvico-1.0.0-beta.5-macos-arm64.zip) · [版本说明与 SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.5)
 
 - **适用：Apple Silicon（M1 及更新芯片），macOS 13 或更新版本。** 此包不支持 Intel Mac。
 - 打开 DMG，将 **Xvico** 拖到 **Applications（应用程序）**，再从应用程序打开。
@@ -123,4 +125,6 @@ python3 scripts/check-release.py
 
 项目自己的可授权材料采用 [Xvico Source Available License 1.0](LICENSE)，属于源码可用许可，不是 OSI 开源许可证。第三方 GPL、Opus 等组件继续适用各自许可证，根商业条款不替代这些权利。详见 [商业授权说明](COMMERCIAL_LICENSE.md) 和 [第三方许可清单](THIRD_PARTY_NOTICES.md)。
 
-使用问题、功能建议与商业授权申请，可通过应用 **设备设置 → 联系开发者** 中的二维码联系维护者。
+使用问题、功能建议与商业授权申请，可通过应用 **设备设置 → 联系开发者** 中的微信二维码，或 Telegram [@heitonk](https://t.me/heitonk) 联系维护者。
+
+语音启停、睡眠唤醒与连接恢复行为及硬件验收步骤，见[语音生命周期说明](docs/voice-lifecycle.md)。连续语音及断连恢复已实测；真实睡眠唤醒仍待验收。

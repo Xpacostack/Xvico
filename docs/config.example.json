@@ -1,0 +1,13 @@
+{
+  "format": "Xvico.Configuration",
+  "schemaVersion": 1,
+  "settings": {
+    "pointerSensitivity": 1.0,
+    "pointerProfile": "均衡",
+    "dragAcceleration": 1.6,
+    "autoSwitchScenes": true
+  },
+  "scenes": [],
+  "shortcuts": [],
+  "learnedUsages": {}
+}

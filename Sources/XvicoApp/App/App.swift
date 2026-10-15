@@ -20,6 +20,8 @@ struct XvicoApp: App {
                 }
                 .frame(minWidth: 1050, minHeight: 720)
                 .onAppear {
+                    let model = model
+                    let voice = voice
                     model.siriVoiceHandler = { [weak voice, weak model] pressed in
                         guard let voice, let model else { return false }
                         return voice.handleRemotePush(pressed, model: model)

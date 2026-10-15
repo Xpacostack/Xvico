@@ -684,3 +684,37 @@
 "拖动加速" = "Accélération du glisser";
 
 "仅在按住鼠标映射键拖动时生效：慢移保持精准，快滑增加距离；设为 1× 恢复原有拖动速度。" = "Uniquement en maintenant un bouton associé à la souris : les mouvements lents restent précis, les gestes rapides vont plus loin. Réglez sur 1× pour retrouver la vitesse initiale.";
+
+"配置文件" = "Fichier de configuration";
+
+"配置已同步" = "Configuration synchronisée";
+
+"新配置已读取，松开按键和触控后生效。" = "Nouvelle configuration lue ; relâchez les boutons et la surface tactile pour l’appliquer.";
+
+"配置文件无效，继续使用最近有效配置。修正文件后会自动重载。" = "Fichier de configuration invalide. La dernière configuration valide reste active ; corrigez le fichier pour la recharger automatiquement.";
+
+"配置版本不受支持，继续使用最近有效配置。" = "Version de configuration non prise en charge. La dernière configuration valide reste active.";
+
+"文件与界面均有改动，尚未覆盖文件。请选择要使用的版本。" = "Le fichier et l’interface ont été modifiés. Le fichier n’a pas été écrasé ; choisissez la version à utiliser.";
+
+"配置文件已移走，当前设置仍有效。可重新保存当前配置。" = "Le fichier de configuration a été déplacé ou supprimé. Les réglages actuels restent actifs ; enregistrez-les pour le recréer.";
+
+"配置未能保存，当前设置仍有效。请检查配置目录的写入权限。" = "Impossible d’enregistrer la configuration. Les réglages actuels restent actifs ; vérifiez les droits d’écriture du dossier.";
+
+"界面与文件使用同一份设置，保存有效 JSON 后自动生效。权限和语音授权独立保存在本机。" = "L’interface et le fichier partagent les mêmes réglages. Les modifications JSON valides s’appliquent automatiquement. Les permissions et autorisations vocales restent stockées séparément sur ce Mac.";
+
+"打开配置文件夹" = "Ouvrir le dossier de configuration";
+
+"使用文件配置" = "Utiliser la configuration du fichier";
+
+"保存当前配置" = "Enregistrer la configuration actuelle";
+
+"恢复未保存配置" = "Récupérer la configuration non enregistrée";
+
+"有未保存的配置副本，可在「配置文件」中恢复。" = "Une copie non enregistrée est disponible dans « Fichier de configuration ».";
+
+// Voice lifecycle interruption guidance
+"系统睡眠已停止语音；唤醒后请重新启动系统语音后端" = "La mise en veille a arrêté la capture vocale. Redémarrez le service vocal système après le réveil.";
+"遥控器输入连接已中断；连接恢复后请重新启动系统语音后端" = "La connexion d’entrée de la télécommande a été interrompue. Redémarrez le service vocal système après la reconnexion.";
+
+"通过 Telegram 联系开发者" = "Contacter le développeur sur Telegram";

@@ -39,7 +39,23 @@ struct RemoteButtonValueFilter {
 }
 
 @MainActor
-final class RemoteInputMonitor {
+protocol RemoteInputMonitoring: AnyObject {
+    var onUsage: ((Int, Int, Bool) -> Void)? { get set }
+    var onStatus: ((String) -> Void)? { get set }
+    var onTouch: ((RemoteTouchSample) -> Void)? { get set }
+    var onTouchStatus: ((String) -> Void)? { get set }
+    var onInterception: ((Bool) -> Void)? { get set }
+    var onDiagnostic: ((String) -> Void)? { get set }
+    var onInterceptionDetail: ((String?) -> Void)? { get set }
+    var onInputLost: (() -> Void)? { get set }
+    func start(interceptButtons: Bool)
+    func stop()
+    func setButtonInterception(_ enabled: Bool)
+    func reidentifyTouch()
+}
+
+@MainActor
+final class RemoteInputMonitor: RemoteInputMonitoring {
     var onUsage: ((Int, Int, Bool) -> Void)?
     var onStatus: ((String) -> Void)?
     var onTouch: ((RemoteTouchSample) -> Void)?
@@ -47,14 +63,30 @@ final class RemoteInputMonitor {
     var onInterception: ((Bool) -> Void)?
     var onDiagnostic: ((String) -> Void)?
     var onInterceptionDetail: ((String?) -> Void)?
+    var onInputLost: (() -> Void)?
     private var managers: [RemoteHIDInterface: IOHIDManager] = [:]
+    private final class CallbackContext {
+        weak var monitor: RemoteInputMonitor?
+        let kind: RemoteHIDInterface
+        init(_ monitor: RemoteInputMonitor, kind: RemoteHIDInterface) {
+            self.monitor = monitor; self.kind = kind
+        }
+    }
+    private var callbackContexts: [RemoteHIDInterface: CallbackContext] = [:]
     private var remoteDevices: [Int: RemoteHIDInterface] = [:]
     private var interceptButtons = true
-    private let multitouch = RemoteMultitouchMonitor()
+    private let multitouch: any RemoteMultitouchMonitoring
+    private let touchReconnect: RemoteTouchReconnectController
     private var suppression = RemotePowerSuppression()
     private var touches: [Int: RemoteTouchSample] = [:]
     private var coordinateAxes: [Int: Set<Int>] = [:]
     private var buttonValues = RemoteButtonValueFilter()
+
+    init(multitouch: (any RemoteMultitouchMonitoring)? = nil) {
+        let driver = multitouch ?? RemoteMultitouchMonitor()
+        self.multitouch = driver
+        touchReconnect = RemoteTouchReconnectController(driver: driver)
+    }
 
     func start(interceptButtons: Bool = true) {
         guard managers.isEmpty else { return }
@@ -80,28 +112,38 @@ final class RemoteInputMonitor {
 
     private func open(_ kind: RemoteHIDInterface) {
         let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
+        let registration = CallbackContext(self, kind: kind)
+        callbackContexts[kind] = registration
         IOHIDManagerSetDeviceMatching(manager, kind.matching as CFDictionary)
-        let context = Unmanaged.passUnretained(self).toOpaque()
+        let context = Unmanaged.passUnretained(registration).toOpaque()
         IOHIDManagerRegisterDeviceMatchingCallback(manager, { context, _, sender, device in
             guard let context, let sender else { return }
-            let monitor = Unmanaged<RemoteInputMonitor>.fromOpaque(context).takeUnretainedValue()
+            let registration = Unmanaged<CallbackContext>.fromOpaque(context).takeUnretainedValue()
             Task { @MainActor in
-                guard monitor.isCurrentManager(sender) else { return }
+                guard let monitor = registration.monitor,
+                      monitor.callbackContexts[registration.kind] === registration,
+                      monitor.isCurrentManager(sender) else { return }
                 monitor.didMatch(device)
             }
         }, context)
         IOHIDManagerRegisterInputValueCallback(manager, { context, _, _, value in
             guard let context else { return }
-            let monitor = Unmanaged<RemoteInputMonitor>.fromOpaque(context).takeUnretainedValue()
+            let registration = Unmanaged<CallbackContext>.fromOpaque(context).takeUnretainedValue()
             // Input callback sender is the IOHIDDevice, not the IOHIDManager.
             // didReceive checks the element's device against the matched set.
-            Task { @MainActor in monitor.didReceive(value) }
+            Task { @MainActor in
+                guard let monitor = registration.monitor,
+                      monitor.callbackContexts[registration.kind] === registration else { return }
+                monitor.didReceive(value)
+            }
         }, context)
         IOHIDManagerRegisterDeviceRemovalCallback(manager, { context, _, sender, device in
             guard let context, let sender else { return }
-            let monitor = Unmanaged<RemoteInputMonitor>.fromOpaque(context).takeUnretainedValue()
+            let registration = Unmanaged<CallbackContext>.fromOpaque(context).takeUnretainedValue()
             Task { @MainActor in
-                guard monitor.isCurrentManager(sender) else { return }
+                guard let monitor = registration.monitor,
+                      monitor.callbackContexts[registration.kind] === registration,
+                      monitor.isCurrentManager(sender) else { return }
                 monitor.didRemove(device)
             }
         }, context)
@@ -133,14 +175,18 @@ final class RemoteInputMonitor {
         guard let manager = managers.removeValue(forKey: kind) else { return }
         IOHIDManagerUnscheduleFromRunLoop(manager, CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue)
         IOHIDManagerClose(manager, IOOptionBits(kIOHIDOptionsTypeNone))
+        callbackContexts.removeValue(forKey: kind)
         let removed = remoteDevices.filter { $0.value == kind }.map(\.key)
         for id in removed { remoteDevices.removeValue(forKey: id); touches.removeValue(forKey: id); coordinateAxes.removeValue(forKey: id); buttonValues.remove(deviceID: id) }
+        // Reopening an interface (for example after changing interception)
+        // also loses matching releases from the old input stream.
+        if !removed.isEmpty { onInputLost?() }
         if kind == .buttons {
             suppression = RemotePowerSuppression()
             onInterception?(false)
             onInterceptionDetail?(nil)
             onStatus?("等待 Siri Remote 连接")
-        } else { multitouch.stop(); onTouchStatus?("等待遥控器触控接口") }
+        } else { touchReconnect.stop(); onTouchStatus?("等待遥控器触控接口") }
     }
 
     func stop() {
@@ -159,7 +205,7 @@ final class RemoteInputMonitor {
         } else {
             onTouchStatus?("已识别 Siri Remote 触控身份接口")
             let location = property(kIOHIDLocationIDKey)
-            if location >= 0 { multitouch.start(locationID: UInt32(truncatingIfNeeded: location)) }
+            if location >= 0 { touchReconnect.connect(locationID: UInt32(truncatingIfNeeded: location)) }
         }
     }
 
@@ -171,8 +217,15 @@ final class RemoteInputMonitor {
         if kind == .buttons {
             suppression.buttonInterfacePresent = remoteDevices.values.contains(.buttons)
             onInterception?(suppression.active)
-            if !suppression.buttonInterfacePresent { onStatus?("等待 Siri Remote 连接") }
-        } else if !remoteDevices.values.contains(.touch) { multitouch.stop(); onTouchStatus?("等待遥控器触控接口") }
+            if !suppression.buttonInterfacePresent {
+                onInputLost?()
+                onStatus?("等待 Siri Remote 连接")
+            }
+        } else if !remoteDevices.values.contains(.touch) {
+            touchReconnect.stop()
+            onInputLost?()
+            onTouchStatus?("等待遥控器触控接口")
+        }
     }
 
     private func didReceive(_ value: IOHIDValue) {

@@ -118,13 +118,14 @@ final class VoiceRoutingTests: XCTestCase {
         XCTAssertEqual(voice.readiness, "由输入法识别")
     }
     func testMicrophoneGateOnlyTogglesOnActualTriggerAndResetClosesIt() {
-        var gate = InputMethodMicrophoneGate()
-        XCTAssertFalse(gate.active)
-        XCTAssertTrue(gate.trigger())
-        XCTAssertFalse(gate.trigger())
-        XCTAssertTrue(gate.trigger())
-        gate.reset()
-        XCTAssertFalse(gate.active)
+        var commands: [Bool] = []
+        let remote = RemoteVoiceService(microphoneControl: { commands.append($0); return 0 })
+        XCTAssertFalse(remote.microphoneHeld)
+        remote.inputMethodTrigger(); XCTAssertTrue(remote.microphoneHeld)
+        remote.inputMethodTrigger(); XCTAssertFalse(remote.microphoneHeld)
+        remote.inputMethodTrigger(); XCTAssertTrue(remote.microphoneHeld)
+        remote.stop(); XCTAssertFalse(remote.microphoneHeld)
+        XCTAssertEqual(commands, [true, false, true, false])
     }
     func testMappedKeyboardObserverSeesActualConfiguredSingleAndDoubleActions() async throws {
         let domain = "XvicoMappedOutput.\(UUID())"

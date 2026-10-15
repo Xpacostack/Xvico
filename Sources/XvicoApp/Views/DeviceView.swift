@@ -122,6 +122,34 @@ struct DeviceView: View {
                     XvicoLocalizedText("默认映射与按 App 场景独立保存，未匹配 App 时使用默认映射。").font(.caption).foregroundStyle(XvicoTheme.secondaryText)
                     Button("前往「功能映射」") { model.selectSceneForMapping(nil) }
                     Toggle("根据前台 App 自动切换映射", isOn: $model.settings.autoSwitchScenes)
+                    if let url = model.configurationFileURL {
+                        DisclosureGroup("配置文件") {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text(url.path).font(.caption.monospaced()).textSelection(.enabled)
+                                    .foregroundStyle(XvicoTheme.secondaryText)
+                                XvicoLocalizedText("界面与文件使用同一份设置，保存有效 JSON 后自动生效。权限和语音授权独立保存在本机。")
+                                    .font(.caption).foregroundStyle(XvicoTheme.secondaryText)
+                                XvicoLocalizedText(model.configurationState.message).font(.caption)
+                                HStack {
+                                    Button("打开配置文件夹") { model.revealConfiguration() }
+                                    if model.configurationNeedsResolution {
+                                        Button("使用文件配置") { model.useFileConfiguration() }
+                                        Button("保存当前配置") { model.saveCurrentConfiguration() }
+                                    }
+                                    if model.hasRecoverableConfiguration {
+                                        Button("恢复未保存配置") { model.recoverUnsavedConfiguration() }
+                                    }
+                                }
+                            }.padding(.top, 8)
+                        }
+                        if model.configurationNeedsResolution {
+                            XvicoLocalizedLabel(model.configurationState.message, systemImage: "exclamationmark.triangle")
+                                .font(.caption).foregroundStyle(.orange)
+                        } else if model.hasRecoverableConfiguration {
+                            XvicoLocalizedText("有未保存的配置副本，可在「配置文件」中恢复。")
+                                .font(.caption).foregroundStyle(XvicoTheme.secondaryText)
+                        }
+                    }
                 }
                 SettingsSection(title: "音量键功能", symbol: "speaker.wave.2") {
                     XvicoOptionPicker(title: "音量加减键做什么", selection: $model.settings.volumeKeyMode,
@@ -177,8 +205,27 @@ struct DeviceView: View {
                                 XvicoLocalizedText("使用中遇到问题、有功能建议或反馈，欢迎联系我。")
                                     .font(.caption).foregroundStyle(XvicoTheme.secondaryText)
                                     .fixedSize(horizontal: false, vertical: true)
+                                Link(destination: URL(string: "https://t.me/heitonk")!) {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "paperplane.fill")
+                                            .font(.system(size: 16, weight: .medium)).foregroundStyle(.blue)
+                                            .frame(width: 28)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Telegram").font(.system(size: 12, weight: .semibold))
+                                            Text("@heitonk").font(.system(size: 12)).foregroundStyle(XvicoTheme.secondaryText)
+                                        }
+                                        Spacer(minLength: 4)
+                                        Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .medium))
+                                            .foregroundStyle(XvicoTheme.secondaryText)
+                                    }
+                                    .padding(.horizontal, 12).frame(maxWidth: .infinity, minHeight: 48)
+                                    .contentShape(RoundedRectangle(cornerRadius: 12))
+                                    .xvicoGlassPanel(cornerRadius: 12, interactive: true)
+                                }.buttonStyle(.plain)
+                                    .accessibilityLabel("Telegram @heitonk")
+                                    .help("通过 Telegram 联系开发者")
                             }.frame(maxWidth: .infinity, alignment: .leading)
-                        }.frame(height: 132)
+                        }.frame(minHeight: 132)
                     }
                 }
             }.font(XvicoTypography.body).frame(maxWidth: XvicoLayout.contentWidth).padding(XvicoLayout.pageInset)

@@ -3,12 +3,6 @@ import Combine
 import Foundation
 import XvicoBluetooth
 
-struct InputMethodMicrophoneGate {
-    private(set) var active = false
-    mutating func trigger() -> Bool { active.toggle(); return active }
-    mutating func reset() { active = false }
-}
-
 @MainActor
 final class RemoteVoiceService: ObservableObject {
     @Published private(set) var status = "尚未连接语音通道"
@@ -22,9 +16,10 @@ final class RemoteVoiceService: ObservableObject {
     @Published private(set) var microphoneHeld = false
     @Published private(set) var microphoneControlError: String?
     @Published private(set) var lastAudioAt: Date?
-    private var inputMethodGate = InputMethodMicrophoneGate()
     func inputMethodTrigger() {
-        setMicrophoneHeld(inputMethodGate.trigger())
+        // Toggle the last successful command, not a second optimistic flag.
+        // A failed enable/disable must be retried by the next trigger.
+        setMicrophoneHeld(!microphoneHeld)
     }
     private var transport: CoreBluetoothVoiceTransport?
     private var monitor: DirectVoiceGATTMonitor?
@@ -35,12 +30,14 @@ final class RemoteVoiceService: ObservableObject {
     private var errorHandler: ((String) -> Void)?
     private let defaults: UserDefaults
     private let microphoneControl: (Bool) -> Int32
-    private let capture = RemoteVoiceCapture()
+    private let capture: any RemoteVoiceCapturing
 
     init(defaults: UserDefaults = .standard,
-         microphoneControl: @escaping (Bool) -> Int32 = RemoteMicrophoneControl.setEnabled) {
+         microphoneControl: @escaping (Bool) -> Int32 = RemoteMicrophoneControl.setEnabled,
+         capture: (any RemoteVoiceCapturing)? = nil) {
         self.defaults = defaults
         self.microphoneControl = microphoneControl
+        self.capture = capture ?? RemoteVoiceCapture()
     }
     var hasDecodedAudio: Bool { decodedFrames > 0 }
     func setMicrophoneHeld(_ held: Bool) {
@@ -67,7 +64,10 @@ final class RemoteVoiceService: ObservableObject {
         catch { fail(error.localizedDescription); return }
         isConnecting = true
         let session = generation
-        capture.start(usePersistentApproval: usePersistentApproval, onFrame: { [weak self] in self?.receiveFrame($0) },
+        capture.start(usePersistentApproval: usePersistentApproval, onFrame: { [weak self] frame in
+                          guard let self, self.generation == session else { return }
+                          self.receiveFrame(frame)
+                      },
                       onStatus: { [weak self] status in
                           guard let self, self.generation == session else { return }
                           self.status = status
@@ -76,7 +76,10 @@ final class RemoteVoiceService: ObservableObject {
                           guard let self, self.generation == session else { return }
                           self.isConnecting = false; self.isSubscribed = true
                       },
-                      onError: { [weak self] in self?.fail($0) })
+                      onError: { [weak self] message in
+                          guard let self, self.generation == session else { return }
+                          self.fail(message)
+                      })
     }
 
     func start(audio: @escaping (AVAudioPCMBuffer) -> Void = { _ in },
@@ -145,8 +148,12 @@ final class RemoteVoiceService: ObservableObject {
     }
     private func decode(_ frame: RemoteOpusFrame) throws {
         guard let stream else { return }
+        let session = generation
         let buffers = try stream.ingest(frame)
-        for buffer in buffers { audioHandler?(buffer) }
+        for buffer in buffers {
+            audioHandler?(buffer)
+            guard generation == session else { return }
+        }
         decodedFrames = stream.decodedFrames
         if !buffers.isEmpty {
             lastAudioAt = Date()
@@ -155,21 +162,32 @@ final class RemoteVoiceService: ObservableObject {
         }
     }
     func stop() {
-        inputMethodGate.reset()
+        // Invalidate callbacks before stopping a transport, whose teardown can
+        // itself emit an error or a final buffer.
+        generation = UUID()
         setMicrophoneHeld(false)
         capture.stop()
-        generation = UUID(); connection?.cancel(); connection = nil
+        connection?.cancel(); connection = nil
         transport?.disconnect(); transport = nil; monitor = nil
         stream = nil; audioHandler = nil; errorHandler = nil
         lastAudioAt = nil
         isConnecting = false; isSubscribed = false
+        errorMessage = nil
         status = "语音通道已停止"
+    }
+    func interrupt(_ message: String, cancellingRecognition: () -> Void = {}) {
+        let wasActive = isConnecting || isSubscribed || microphoneHeld || errorMessage == message
+        stop()
+        // Cancelling recognition can call stop again. Publish the reason only
+        // after both sides are closed, and retain it on duplicate loss events.
+        cancellingRecognition()
+        if wasActive { errorMessage = message; status = message }
     }
     private func fail(_ message: String) {
         let handler = errorHandler
         stop()
-        handler?(message)
         errorMessage = message; status = "遥控器麦克风尚不可用"
+        handler?(message)
     }
     private static func describe(_ error: Error) -> String {
         guard let error = error as? VoiceMonitorError else { return error.localizedDescription }

@@ -17,5 +17,11 @@ __pycache__/
 .env
 .env.*
 !.env.example
+# Personal behavior documents copied into the repository for local debugging.
+/config.json
+/config.last-good.json
+/config.unsaved.json
+/config.external-backup.json
+/legacy-pre-migration.plist
 Sources/XvicoApp/Resources/VoiceRuntime/*
 !Sources/XvicoApp/Resources/VoiceRuntime/.gitkeep

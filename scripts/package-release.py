@@ -51,16 +51,13 @@ def main():
     dest.mkdir(parents=True, exist_ok=True)
     base = 'Xvico-' + args.version + '-macos-arm64'
     dmg = dest / (base + '.dmg'); archive = dest / (base + '.zip')
+    changes_path = ROOT / 'docs/releases' / (args.version + '.md')
+    changes = changes_path.read_text().strip() if changes_path.is_file() else (
+        '## 更新说明 / Release changes\n\n'
+        '详见对应版本的源码与提交记录。See the matching source tag and commit history.')
     notes = f'''# Xvico {args.version}
 
-## 此版本修复 / Fixes in this version
-
-- 修复打开语音设置时的界面重入崩溃；运行时签名检查移至后台。
-- Fix a voice-settings crash by verifying runtime signatures off the UI thread.
-- 修复 macOS 临时目录别名被误判为越界、导致语音后台提前退出的问题；保留真正越界链接的安全检查。
-- Canonicalize temporary-directory aliases on both sides of runtime containment checks, preserving rejection of real escaping links.
-- 从早期测试版升级后，已安装的系统语音后台需要用户确认更新一次；原有按键、场景与系统隐私授权保留。
-- Upgrading an installed voice backend from an earlier beta requires one administrator-approved helper update. Existing mappings, scenes and privacy permissions are retained.
+{changes}
 
 ## 下载与安装 / Download and install
 

@@ -34,17 +34,25 @@ final class VoiceService: ObservableObject {
         measurementActive = true
         latency.begin(at: ProcessInfo.processInfo.systemUptime)
     }
-    @Published var inputSource: VoiceInputSource = VoiceInputSource(rawValue: UserDefaults.standard.string(forKey: "xvibe.voice.inputSource") ?? "") ?? .mac {
-        didSet { UserDefaults.standard.set(inputSource.rawValue, forKey: "xvibe.voice.inputSource") }
+    private let defaults: UserDefaults
+    @Published var inputSource: VoiceInputSource {
+        didSet { defaults.set(inputSource.rawValue, forKey: "xvibe.voice.inputSource") }
     }
-    @Published var remotePushToTalk = UserDefaults.standard.bool(forKey: "xvibe.voice.pushToTalk") {
-        didSet { UserDefaults.standard.set(remotePushToTalk, forKey: "xvibe.voice.pushToTalk") }
+    @Published var remotePushToTalk: Bool {
+        didSet { defaults.set(remotePushToTalk, forKey: "xvibe.voice.pushToTalk") }
     }
-    @Published var recognitionMode = VoiceRecognitionMode.restored(from: UserDefaults.standard.string(forKey: "xvibe.voice.recognitionMode")) {
-        didSet { UserDefaults.standard.set(recognitionMode.rawValue, forKey: "xvibe.voice.recognitionMode") }
+    @Published var recognitionMode: VoiceRecognitionMode {
+        didSet { defaults.set(recognitionMode.rawValue, forKey: "xvibe.voice.recognitionMode") }
     }
-    @Published var inputMethodTriggerKey = UserDefaults.standard.string(forKey: "xvibe.voice.inputMethodTriggerKey") ?? "Fn" {
-        didSet { UserDefaults.standard.set(inputMethodTriggerKey, forKey: "xvibe.voice.inputMethodTriggerKey") }
+    @Published var inputMethodTriggerKey: String {
+        didSet { defaults.set(inputMethodTriggerKey, forKey: "xvibe.voice.inputMethodTriggerKey") }
+    }
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        inputSource = VoiceInputSource(rawValue: defaults.string(forKey: "xvibe.voice.inputSource") ?? "") ?? .mac
+        remotePushToTalk = defaults.bool(forKey: "xvibe.voice.pushToTalk")
+        recognitionMode = VoiceRecognitionMode.restored(from: defaults.string(forKey: "xvibe.voice.recognitionMode"))
+        inputMethodTriggerKey = defaults.string(forKey: "xvibe.voice.inputMethodTriggerKey") ?? "Fn"
     }
     func handleMappedKeyboard(_ binding: KeyBinding, down: Bool, model: AppModel) {
         guard down, recognitionMode == .inputMethod, inputSource == .siriRemote,
@@ -64,6 +72,7 @@ final class VoiceService: ObservableObject {
     private var finishing: Task<Void, Never>?
     private var finalTranscriptHandler: ((String) -> Void)?
     private var pushStartup: Task<Void, Never>?
+    private var channelStartup: Task<Void, Never>?
     private var pushHeld = false
     private var releaseMicrophone: (() -> Void)?
 
@@ -128,6 +137,25 @@ final class VoiceService: ObservableObject {
     func startRemote(stop: @escaping () -> Void = {}) async {
         remoteStop = stop
         await start(source: .siriRemote)
+    }
+
+    func startRemoteChannel(model: AppModel, usePersistentApproval: Bool = true) {
+        stop(); model.remoteVoice.stop()
+        let session = generation
+        channelStartup = Task { [weak self, weak model] in
+            guard !Task.isCancelled, let self, let model, self.generation == session,
+                  model.running, !model.systemSleeping else { return }
+            let channel = model.remoteVoice
+            if self.recognitionMode == .local && !self.remotePushToTalk {
+                await self.startRemote(stop: { [weak channel] in channel?.stop() })
+                guard self.isListening else { return }
+            }
+            guard !Task.isCancelled, model.running, !model.systemSleeping else { return }
+            channel.startCapture(usePersistentApproval: usePersistentApproval,
+                audio: { [weak self] in self?.appendRemoteAudio($0) },
+                failure: { [weak self] in self?.remoteFailed($0) })
+            self.channelStartup = nil
+        }
     }
     func appendRemoteAudio(_ buffer: AVAudioPCMBuffer) {
         if measurementActive && buffer.frameLength > 0 && latency.firstAudioMilliseconds == nil {
@@ -318,6 +346,7 @@ final class VoiceService: ObservableObject {
 
     func stop() {
         measurementActive = false
+        channelStartup?.cancel(); channelStartup = nil
         releaseMicrophone?(); releaseMicrophone = nil
         isFinalizing = false
         pushStartup?.cancel(); pushStartup = nil; pushHeld = false
