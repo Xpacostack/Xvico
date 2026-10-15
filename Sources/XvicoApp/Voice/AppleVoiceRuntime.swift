@@ -40,7 +40,7 @@ struct AppleVoiceRuntimeStore: Sendable {
         }
         if let entries = fm.enumerator(at: stage, includingPropertiesForKeys: nil) {
             for case let path as URL in entries {
-                guard path.resolvingSymlinksInPath().path.hasPrefix(stage.path + "/") else {
+                guard VoiceRuntimeLocation.containsResolvedItem(path, within: stage) else {
                     throw failure("语音运行时目录包含不安全链接")
                 }
             }
@@ -80,11 +80,23 @@ struct AppleVoiceRuntimeStore: Sendable {
     @Published private(set) var available = false
     @Published private(set) var busy = false
     @Published private(set) var status = "遥控器语音需要 Apple 运行时"
-    private let store = AppleVoiceRuntimeStore()
-    init() { refresh() }
-    func refresh() {
-        available = store.available()
-        status = available ? "Apple 语音运行时已就绪" : "遥控器语音需要 Apple 运行时"
+    private let store: AppleVoiceRuntimeStore
+    init(store: AppleVoiceRuntimeStore = AppleVoiceRuntimeStore()) { self.store = store }
+
+    // StateObject initialization happens inside SwiftUI's graph update. Process
+    // waitUntilExit spins a run loop, so signature checks must never run there
+    // or anywhere else on the main thread.
+    @discardableResult func refresh() -> Task<Void, Never>? {
+        guard !busy else { return nil }
+        busy = true
+        let store = store
+        return Task { [weak self] in
+            let ready = await Task.detached { store.available() }.value
+            guard let self else { return }
+            self.available = ready
+            self.status = ready ? "Apple 语音运行时已就绪" : "遥控器语音需要 Apple 运行时"
+            self.busy = false
+        }
     }
     func chooseRuntime(locale: Locale = .current) {
         guard !busy else { return }
@@ -94,12 +106,16 @@ struct AppleVoiceRuntimeStore: Sendable {
         guard panel.runModal() == .OK, let source = panel.url else { return }
         busy = true; status = "正在验证并导入 Apple 运行时"
         let store = store
-        Task {
+        Task { [weak self] in
             do {
-                try await Task.detached { try store.importRuntime(from: source) }.value
-                refresh()
-            } catch { status = error.localizedDescription }
-            busy = false
+                let ready = try await Task.detached {
+                    try store.importRuntime(from: source)
+                    return store.available()
+                }.value
+                self?.available = ready
+                self?.status = ready ? "Apple 语音运行时已就绪" : "遥控器语音需要 Apple 运行时"
+            } catch { self?.status = error.localizedDescription }
+            self?.busy = false
         }
     }
 }

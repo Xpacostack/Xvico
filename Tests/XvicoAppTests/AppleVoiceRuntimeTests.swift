@@ -77,4 +77,48 @@ final class AppleVoiceRuntimeTests: XCTestCase {
         XCTAssertTrue(store.available())
         try AppleVoiceRuntimeStore.verifyAppleSignatures(VoiceRuntimeLocation.imported(in: home))
     }
+
+    @MainActor func testManagerDoesNotVerifyDuringViewInitializationAndRefreshesOffMainThread() async throws {
+        try fixture(VoiceRuntimeLocation.imported(in: home))
+        let checked = expectation(description: "Signature validation runs off main thread")
+        checked.assertForOverFulfill = true
+        let store = AppleVoiceRuntimeStore(home: home, app: app, verify: { _ in
+            XCTAssertFalse(Thread.isMainThread, "Waiting for codesign on the UI thread reenters SwiftUI")
+            checked.fulfill()
+        })
+        let manager = AppleVoiceRuntimeManager(store: store)
+        XCTAssertFalse(manager.available)
+        XCTAssertFalse(manager.busy, "Constructing a StateObject must not start process or run-loop work")
+        let refresh = try XCTUnwrap(manager.refresh())
+        XCTAssertTrue(manager.busy)
+        XCTAssertNil(manager.refresh(), "Concurrent page refreshes must not launch duplicate validators")
+        await refresh.value
+        await fulfillment(of: [checked], timeout: 2)
+        XCTAssertTrue(manager.available)
+        XCTAssertFalse(manager.busy)
+    }
+
+    func testRuntimeContainmentAcceptsPrivateVarAliasAndInternalFrameworkLinks() throws {
+        let root = URL(fileURLWithPath: "/private/var/tmp").appendingPathComponent("XvicoPathSafety-\(UUID())")
+        let binary = root.appendingPathComponent("Frameworks/Example.framework/Versions/A/Example")
+        try FileManager.default.createDirectory(at: binary.deletingLastPathComponent(), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data("test fixture".utf8).write(to: binary)
+        let link = root.appendingPathComponent("Frameworks/Example.framework/Example")
+        try FileManager.default.createSymbolicLink(atPath: link.path, withDestinationPath: "Versions/A/Example")
+        XCTAssertTrue(VoiceRuntimeLocation.containsResolvedItem(link, within: root))
+        XCTAssertTrue(VoiceRuntimeLocation.containsResolvedItem(binary.resolvingSymlinksInPath(), within: root))
+        XCTAssertFalse(VoiceRuntimeLocation.containsResolvedItem(root, within: root))
+    }
+
+    func testRuntimeContainmentStillRejectsEscapesAndSiblingPrefixes() throws {
+        let root = temporary.appendingPathComponent("Runtime")
+        let sibling = temporary.appendingPathComponent("Runtime-outside")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: sibling, withIntermediateDirectories: true)
+        let link = root.appendingPathComponent("escape")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: sibling)
+        XCTAssertFalse(VoiceRuntimeLocation.containsResolvedItem(link, within: root))
+        XCTAssertFalse(VoiceRuntimeLocation.containsResolvedItem(sibling.appendingPathComponent("binary"), within: root))
+    }
 }

@@ -285,7 +285,6 @@ struct VoiceView: View {
             remoteVoice.stop(); voice.stop(); return
         }
         if voice.inputSource == .siriRemote {
-            runtime.refresh()
             guard runtime.available else { model.show("请先在语音设置中导入官方 Apple 运行时"); return }
             authorization.refresh()
             if authorization.ready { startCapture() }

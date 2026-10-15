@@ -60,4 +60,12 @@ enum VoiceRuntimeLocation {
         [app.appendingPathComponent("Contents/Resources/PacketLoggerRuntime"), imported(in: home)]
             .first(where: hasLayout)
     }
+    static func containsResolvedItem(_ item: URL, within root: URL) -> Bool {
+        // Foundation can canonicalize /private/var to /var on macOS. Resolve
+        // both sides, then compare components so aliases are accepted while
+        // sibling prefixes and actual escaping symlinks remain rejected.
+        let base = root.resolvingSymlinksInPath().standardizedFileURL.pathComponents
+        let path = item.resolvingSymlinksInPath().standardizedFileURL.pathComponents
+        return path.count > base.count && path.starts(with: base)
+    }
 }

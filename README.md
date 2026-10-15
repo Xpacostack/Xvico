@@ -10,7 +10,7 @@ Xvico 是面向 macOS 的 Siri Remote 控制与语音输入工具。用遥控器
 
 ## 下载安装
 
-**[下载 Xvico 1.0.0-beta.3 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.3/Xvico-1.0.0-beta.3-macos-arm64.dmg)** · [ZIP 备用包](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.3/Xvico-1.0.0-beta.3-macos-arm64.zip) · [版本说明与 SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.3)
+**[下载 Xvico 1.0.0-beta.4 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.4/Xvico-1.0.0-beta.4-macos-arm64.dmg)** · [ZIP 备用包](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.4/Xvico-1.0.0-beta.4-macos-arm64.zip) · [版本说明与 SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.4)
 
 - **适用：Apple Silicon（M1 及更新芯片），macOS 13 或更新版本。** 此包不支持 Intel Mac。
 - 打开 DMG，将 **Xvico** 拖到 **Applications（应用程序）**，再从应用程序打开。

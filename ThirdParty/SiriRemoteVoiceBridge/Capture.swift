@@ -84,7 +84,7 @@ enum XvibeVoiceCapture {
                 var info = stat()
                 guard lstat(path.path, &info) == 0 else { throw CaptureError.invalidDirectory }
                 if info.st_mode & S_IFMT == S_IFLNK {
-                    guard path.resolvingSymlinksInPath().path.hasPrefix(protectedRuntime.path + "/"),
+                    guard VoiceRuntimeLocation.containsResolvedItem(path, within: protectedRuntime),
                           lchown(path.path, 0, 0) == 0 else { throw CaptureError.invalidDirectory }
                 } else {
                     guard info.st_mode & S_IFMT == S_IFDIR || info.st_mode & S_IFMT == S_IFREG else { throw CaptureError.invalidDirectory }

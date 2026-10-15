@@ -10,7 +10,7 @@ Xvico is a macOS companion for Siri Remote, with customizable controls and voice
 
 ## Download and install
 
-**[Download Xvico 1.0.0-beta.3 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.3/Xvico-1.0.0-beta.3-macos-arm64.dmg)** · [Alternative ZIP](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.3/Xvico-1.0.0-beta.3-macos-arm64.zip) · [Release notes and SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.3)
+**[Download Xvico 1.0.0-beta.4 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.4/Xvico-1.0.0-beta.4-macos-arm64.dmg)** · [Alternative ZIP](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.4/Xvico-1.0.0-beta.4-macos-arm64.zip) · [Release notes and SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.4)
 
 - **Apple Silicon (M1 or later), macOS 13 or later.** This build does not support Intel Macs.
 - Open the DMG, drag **Xvico** to **Applications**, then open it from Applications.

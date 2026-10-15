@@ -51,7 +51,7 @@ private func hardenPayload(_ url: URL) throws {
         var info = stat()
         guard lstat(path.path, &info) == 0 else { try fail("无法检查语音组件权限") }
         if info.st_mode & S_IFMT == S_IFLNK {
-            guard path.resolvingSymlinksInPath().path.hasPrefix(url.path + "/") else { try fail("语音组件包含外部链接") }
+            guard VoiceRuntimeLocation.containsResolvedItem(path, within: url) else { try fail("语音组件包含外部链接") }
             guard lchown(path.path, 0, 0) == 0 else { try fail("无法保护语音组件链接") }
         } else {
             guard info.st_mode & S_IFMT == S_IFDIR || info.st_mode & S_IFMT == S_IFREG else { try fail("语音组件类型无效") }
