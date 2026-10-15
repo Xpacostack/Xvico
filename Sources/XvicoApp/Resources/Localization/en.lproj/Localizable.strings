@@ -680,3 +680,7 @@
 "中心点击稳定" = "Steady center clicks";
 "按应用自动匹配" = "Matched automatically by app";
 "手动选择场景" = "Manually selected scene";
+
+"拖动加速" = "Drag acceleration";
+
+"仅在按住鼠标映射键拖动时生效：慢移保持精准，快滑增加距离；设为 1× 恢复原有拖动速度。" = "Applies only while holding a mouse-mapped button: slow movement stays precise, faster swipes travel farther. Set to 1× for the original drag speed.";

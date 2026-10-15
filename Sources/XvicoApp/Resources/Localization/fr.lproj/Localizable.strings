@@ -680,3 +680,7 @@
 "中心点击稳定" = "Stabiliser les clics centraux";
 "按应用自动匹配" = "Correspondance automatique par application";
 "手动选择场景" = "Scène sélectionnée manuellement";
+
+"拖动加速" = "Accélération du glisser";
+
+"仅在按住鼠标映射键拖动时生效：慢移保持精准，快滑增加距离；设为 1× 恢复原有拖动速度。" = "Uniquement en maintenant un bouton associé à la souris : les mouvements lents restent précis, les gestes rapides vont plus loin. Réglez sur 1× pour retrouver la vitesse initiale.";

@@ -49,6 +49,62 @@ final class PointerStabilityTests: XCTestCase {
         }
     }
 
+    func testDragAccelerationPreservesFinePlacementAndExtendsFastSwipes() {
+        for step in [0.002, 0.025] {
+            var original = RemotePointerMotionFilter(), accelerated = RemotePointerMotionFilter()
+            var originalDistance = 0.0, acceleratedDistance = 0.0
+            for i in 0..<15 {
+                let point = sample(0.2 + Double(i) * step, 1 + Double(i) / 60)
+                let a = original.process(point, sensitivity: 1)
+                let b = accelerated.process(point, sensitivity: 1, dragAcceleration: 1.6)
+                originalDistance += a?.x ?? 0; acceleratedDistance += b?.x ?? 0
+                XCTAssertEqual(a == nil, b == nil)
+            }
+            if step < 0.01 { XCTAssertEqual(originalDistance, acceleratedDistance, accuracy: 0.0001) }
+            else { XCTAssertEqual(acceleratedDistance / originalDistance, 1.6, accuracy: 0.001) }
+            // Stopping does not replay filtered motion or add inertial dragging.
+            XCTAssertNil(accelerated.process(sample(0.2 + 14 * step, 1.25), sensitivity: 1, dragAcceleration: 1.6))
+        }
+    }
+
+    func testDragGainDoesNotAffectUnheldPointerAndOneRestoresOldDrag() {
+        var baseline = RemoteGestureProcessor(), boosted = RemoteGestureProcessor(), drag = RemoteGestureProcessor()
+        var settings = XvicoSettings(); settings.ringEnabled = false; settings.dragAcceleration = 1
+        var faster = settings; faster.dragAcceleration = 2.5
+        for i in 0..<15 {
+            let point = sample(0.2 + Double(i) * 0.025, 1 + Double(i) / 60)
+            let expected = baseline.process(point, settings: settings, mode: .scroll)
+            XCTAssertEqual(boosted.process(point, settings: faster, mode: .scroll), expected)
+            XCTAssertEqual(drag.process(point, settings: settings, mode: .scroll, dragging: true), expected)
+        }
+    }
+
+    func testDragAcrossRingNeverScrollsAndRecontactDoesNotJump() {
+        var processor = RemoteGestureProcessor()
+        let settings = XvicoSettings()
+        var outputs: [RemoteGestureOutput] = []
+        for i in 0..<15 {
+            outputs += processor.process(.init(x: 0.9, y: 0.25 + Double(i) * 0.025, touching: true,
+                                                timestamp: 1 + Double(i) / 60),
+                                         settings: settings, mode: .codexTasks, dragging: true)
+        }
+        XCTAssertFalse(outputs.isEmpty)
+        XCTAssertTrue(outputs.allSatisfy { if case .pointer = $0 { return true }; return false })
+        XCTAssertTrue(processor.process(.init(x: 0.9, y: 0.6, touching: false, timestamp: 1.3),
+                                        settings: settings, mode: .codexTasks, dragging: true).isEmpty)
+        XCTAssertTrue(processor.process(sample(0.1, 1.4), settings: settings, mode: .codexTasks, dragging: true).isEmpty)
+    }
+
+    func testDragAccelerationSettingsMigrateRoundTripAndRejectInvalidValues() throws {
+        let old = try JSONDecoder().decode(XvicoSettings.self, from: Data("{}".utf8))
+        XCTAssertEqual(old.dragAcceleration, 1.6)
+        var settings = old; settings.dragAcceleration = 2.1
+        XCTAssertEqual(try JSONDecoder().decode(XvicoSettings.self, from: JSONEncoder().encode(settings)), settings)
+        for value in [0.99, 2.51] {
+            XCTAssertThrowsError(try JSONDecoder().decode(XvicoSettings.self, from: Data("{\"dragAcceleration\":\(value)}".utf8)))
+        }
+    }
+
     @MainActor
     func testCenterPressRetainsPairedMouseEventsAndDeliberateDrag() {
         let domain = "Xvico.ClickStability.\(UUID())"

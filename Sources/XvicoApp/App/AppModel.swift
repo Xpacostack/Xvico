@@ -703,9 +703,9 @@ final class AppModel: ObservableObject {
         var touchSettings = settings
         touchSettings.wheelStyle = effectiveWheelStyle
         if !settings.clickStabilityEnabled { clickStabilizer.reset() }
-        if !heldMouseBindings.isEmpty { touchSettings.ringEnabled = false }
         let outputs = gestureProcessor.process(sample, settings: touchSettings, mode: effectiveRingAction,
-                                              pointerPaused: clickStabilizer.suppresses(sample))
+                                              pointerPaused: clickStabilizer.suppresses(sample),
+                                              dragging: !heldMouseBindings.isEmpty)
         // Resting fingers, contact acquisition and filtered noise have no
         // events to post. Avoid a system trust query on those hardware frames.
         guard !outputs.isEmpty else { return }

@@ -33,7 +33,7 @@ struct RemoteGestureProcessor {
     private var scrollRemainder = 0.0
 
     mutating func process(_ sample: RemoteTouchSample, settings: XvicoSettings, mode: RingAction,
-                          pointerPaused: Bool = false) -> [RemoteGestureOutput] {
+                          pointerPaused: Bool = false, dragging: Bool = false) -> [RemoteGestureOutput] {
         guard sample.touching && settings.touchEnabled else {
             let result: [RemoteGestureOutput] = switchingApps ? [.appEnd] : []
             previous = nil; accumulatedAngle = 0; switchingApps = false; previousMode = nil
@@ -60,10 +60,11 @@ struct RemoteGestureProcessor {
         let radius = hypot(sample.x - 0.5, sample.y - 0.5)
         let previousRadius = hypot(previous.x - 0.5, previous.y - 0.5)
         let ringRadius = min(0.48, max(0.22, settings.ringRadius))
-        guard settings.ringEnabled && radius >= ringRadius && previousRadius >= ringRadius else {
+        guard !dragging && settings.ringEnabled && radius >= ringRadius && previousRadius >= ringRadius else {
             if switchingApps { outputs.append(.appEnd); switchingApps = false }
             accumulatedAngle = 0; scrollRemainder = 0
-            if let movement = pointerMotion.process(sample, sensitivity: settings.pointerSensitivity, profile: settings.pointerProfile) {
+            if let movement = pointerMotion.process(sample, sensitivity: settings.pointerSensitivity, profile: settings.pointerProfile,
+                                                    dragAcceleration: dragging ? settings.dragAcceleration : 1) {
                 outputs.append(.pointer(movement.x, movement.y))
             }
             return outputs

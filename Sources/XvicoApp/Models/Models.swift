@@ -277,6 +277,7 @@ struct XvicoSettings: Codable, Equatable {
     var interceptRemoteButtons = true
     var pointerSensitivity = 1.0
     var pointerProfile: PointerResponseProfile = .balanced
+    var dragAcceleration = 1.6
     var clickStabilityEnabled = true
     var ringEnabled = true
     var ringAction: RingAction = .scroll
@@ -295,7 +296,7 @@ struct XvicoSettings: Codable, Equatable {
     init() {}
     private enum CodingKeys: String, CodingKey {
         case autoSwitchScenes, launchAtLogin, blockPowerActions, touchEnabled, scrollSensitivity, speechLanguage
-        case interceptRemoteButtons, pointerSensitivity, pointerProfile, clickStabilityEnabled, ringEnabled, ringAction, ringToggleKey, wheelStyle, ringSensitivity, ringRadius
+        case interceptRemoteButtons, pointerSensitivity, pointerProfile, dragAcceleration, clickStabilityEnabled, ringEnabled, ringAction, ringToggleKey, wheelStyle, ringSensitivity, ringRadius
         case volumeKeyMode, volumeScrollStep, showDockIcon, showMenuBarIcon, keepRunningWhenClosed, interfaceLanguage, globalBindings
     }
     init(from decoder: Decoder) throws {
@@ -310,6 +311,7 @@ struct XvicoSettings: Codable, Equatable {
         interceptRemoteButtons = try v.decodeIfPresent(Bool.self, forKey: .interceptRemoteButtons) ?? blockPowerActions
         pointerSensitivity = try v.decodeIfPresent(Double.self, forKey: .pointerSensitivity) ?? pointerSensitivity
         pointerProfile = try v.decodeIfPresent(PointerResponseProfile.self, forKey: .pointerProfile) ?? pointerProfile
+        dragAcceleration = try v.decodeIfPresent(Double.self, forKey: .dragAcceleration) ?? dragAcceleration
         clickStabilityEnabled = try v.decodeIfPresent(Bool.self, forKey: .clickStabilityEnabled) ?? clickStabilityEnabled
         ringEnabled = try v.decodeIfPresent(Bool.self, forKey: .ringEnabled) ?? ringEnabled
         ringAction = try v.decodeIfPresent(RingAction.self, forKey: .ringAction) ?? ringAction
@@ -326,6 +328,7 @@ struct XvicoSettings: Codable, Equatable {
         globalBindings = try v.decodeIfPresent([String: KeyBinding].self, forKey: .globalBindings) ?? globalBindings
         for key in RemoteKey.allCases where globalBindings[key.rawValue] == nil { globalBindings[key.rawValue] = key.referenceBinding }
         guard pointerSensitivity.isFinite, (0.2...3).contains(pointerSensitivity),
+              dragAcceleration.isFinite, (1...2.5).contains(dragAcceleration),
               ringSensitivity.isFinite, (0.6...1.8).contains(ringSensitivity),
               ringRadius.isFinite, (0.22...0.48).contains(ringRadius),
               scrollSensitivity.isFinite, (0.1...10).contains(scrollSensitivity),

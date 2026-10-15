@@ -13,7 +13,8 @@ struct RemotePointerMotionFilter {
     }
 
     mutating func process(_ sample: RemoteTouchSample, sensitivity: Double,
-                          profile: PointerResponseProfile = .balanced) -> (x: Double, y: Double)? {
+                          profile: PointerResponseProfile = .balanced,
+                          dragAcceleration: Double = 1) -> (x: Double, y: Double)? {
         guard sample.touching else { reset(); return nil }
         guard let previous else { seed(sample); return nil }
         self.previous = sample
@@ -38,7 +39,12 @@ struct RemotePointerMotionFilter {
         else if speed < 0.7 { acceleration = 0.65 + (speed - 0.1) / 0.6 * 0.35 }
         else if speed < 2.2 { acceleration = 1 + (speed - 0.7) / 1.5 * 1.2 }
         else { acceleration = 2.2 }
-        let gain = 760 * min(3, max(0.2, sensitivity)) * acceleration * profile.gain(at: speed)
+        // Preserve slow placement; extend a deliberate swipe without changing
+        // the filter state or carrying momentum after the finger stops.
+        let progress = min(1, max(0, (speed - 0.25) / 1.0))
+        let blend = progress * progress * (3 - 2 * progress)
+        let dragGain = 1 + (min(2.5, max(1, dragAcceleration)) - 1) * blend
+        let gain = 760 * min(3, max(0.2, sensitivity)) * acceleration * profile.gain(at: speed) * dragGain
         return (filteredX * gain, -filteredY * gain)
     }
 }

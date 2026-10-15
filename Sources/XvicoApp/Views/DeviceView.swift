@@ -91,6 +91,9 @@ struct DeviceView: View {
                     Toggle("中心点击稳定", isOn: $model.settings.clickStabilityEnabled)
                     XvicoLocalizedText("均衡保留原有速度曲线；精准适合小目标，快速适合大屏移动。按下中心键时短暂稳定指针，明显移动后立即允许拖拽。")
                         .font(.caption).foregroundStyle(XvicoTheme.secondaryText)
+                    slider("拖动加速", value: $model.settings.dragAcceleration, range: 1...2.5, suffix: "×")
+                    XvicoLocalizedText("仅在按住鼠标映射键拖动时生效：慢移保持精准，快滑增加距离；设为 1× 恢复原有拖动速度。")
+                        .font(.caption).foregroundStyle(XvicoTheme.secondaryText)
                     Toggle("启用外圈旋转", isOn: $model.settings.ringEnabled).disabled(!model.settings.touchEnabled)
                     XvicoOptionPicker(title: "外圈旋转动作", selection: ringModeBinding, options: [
                         XvicoOption(value: .switchApp, title: "切换 App", symbol: "rectangle.2.swap"),
