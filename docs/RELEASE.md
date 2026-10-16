@@ -2,7 +2,7 @@
 
 ## Public beta packages
 
-The `Package macOS beta` workflow verifies packaging on `main` pushes without publishing, and publishes when the maintainer pushes a `v*-beta.*` tag. It tests the tagged source, builds on a macOS ARM64 runner, verifies both archives, then publishes a GitHub prerelease with DMG, ZIP, SHA256 checksums, installation notes and a manifest. The job uses GitHub’s scoped `contents: write` token; no maintainer API token or signing key is committed. CI uses an isolated signing directory in runner temporary storage; local builds keep their existing signing identity. Only an explicitly authorized maintainer should push a publishing tag.
+The `Package macOS beta` workflow uses the macOS 26 ARM64 image and checks the native glass SDK before building. The separate source-check workflow retains macOS 14 compatibility coverage. It verifies packaging on `main` pushes without publishing, and publishes when the maintainer pushes a `v*-beta.*` tag. It tests the tagged source, builds on a macOS ARM64 runner, verifies both archives, then publishes a GitHub prerelease with DMG, ZIP, SHA256 checksums, installation notes and a manifest. The job uses GitHub’s scoped `contents: write` token; no maintainer API token or signing key is committed. CI uses an isolated signing directory in runner temporary storage; local builds keep their existing signing identity. Only an explicitly authorized maintainer should push a publishing tag.
 
 ```sh
 python3 scripts/build-opus.py

@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   release:
-    runs-on: macos-14
+    runs-on: macos-26
     env:
       RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.0.0-beta.0' }}
     permissions:
@@ -16,6 +16,19 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+      - name: Verify native glass build toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          cat > /tmp/xvico-glass-sdk.swift <<'SWIFT'
+          import AppKit
+          #if compiler(<6.2)
+          #error("Release requires a Swift toolchain with native glass support")
+          #endif
+          @available(macOS 26.0, *)
+          func verifyGlassSDK(_ view: NSGlassEffectView) { view.style = .clear }
+          SWIFT
+          swiftc -typecheck /tmp/xvico-glass-sdk.swift
       - name: Verify source and software tests
         run: |
           set -o pipefail

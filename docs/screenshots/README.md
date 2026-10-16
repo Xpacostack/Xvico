@@ -13,9 +13,9 @@ Recaptured directly from the current-source Xvico app on 2026-10-16 in light app
 | 语音设置 / Voice Settings | [voice-zh.png](voice-zh.png) | [voice-en.png](voice-en.png) |
 | 设备设置 / Device Settings | [device-zh.png](device-zh.png) | [device-en.png](device-en.png) |
 
-图片展示当前源码的新界面，现有 beta.5 下载包仍使用原界面。本目录供 README 展示并纳入 Git；内部诊断记录继续放在被忽略的 `evidence/` 目录。截图保留真实界面内容，未合成连接状态、识别结果或界面控件。语音页的“已就绪”表示截图时后端已由用户开启，且页面显示麦克风关闭；拍摄本身不启动采集。
+图片展示 beta.6 的新版界面。本目录供 README 展示并纳入 Git；内部诊断记录继续放在被忽略的 `evidence/` 目录。截图保留真实界面内容，未合成连接状态、识别结果或界面控件。语音页的“已就绪”表示截图时后端已由用户开启，且页面显示麦克风关闭；拍摄本身不启动采集。
 
-Images show the current-source UI; the existing beta.5 installer retains its earlier interface. This directory is tracked in Git for README presentation. Internal diagnostic evidence stays in the ignored `evidence/` directory. Screenshots do not fabricate connection status, recognition results or controls. The voice page's Ready state reflects an already user-started backend, with the microphone shown as off; taking screenshots does not start capture.
+Images show the new beta.6 interface. This directory is tracked in Git for README presentation. Internal diagnostic evidence stays in the ignored `evidence/` directory. Screenshots do not fabricate connection status, recognition results or controls. The voice page's Ready state reflects an already user-started backend, with the microphone shown as off; taking screenshots does not start capture.
 
 [中文介绍](../../README.md) · [English introduction](../../README.en.md)
 
