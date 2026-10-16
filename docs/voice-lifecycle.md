@@ -1,7 +1,7 @@
 # 语音启停与连接恢复 / Voice lifecycle and recovery
 
-本文描述 beta.6 的语音与连接行为；beta.5 仍有单次一小时上限，升级主程序后还需更新后台组件，以下取消时限的行为才会生效。
-This document describes beta.6. Beta.5 retains its one-hour limit; after upgrading the app, install the updated backend payload for sessions without a fixed deadline.
+本文描述 beta.7 的语音与连接行为；beta.5 仍有单次一小时上限，升级主程序后还需更新后台组件，以下取消时限的行为才会生效。
+This document describes beta.7. Beta.5 retains its one-hour limit; after upgrading the app, install the updated backend payload for sessions without a fixed deadline.
 
 ## 正常使用 / Normal use
 

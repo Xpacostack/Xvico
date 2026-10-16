@@ -6,13 +6,13 @@
 
 Xvico turns Apple TV Siri Remote into a macOS controller for voice-driven coding (vibe coding), customizable per-app mappings, and touch navigation. Move the pointer, scroll conversations and code, switch apps or tasks, and assign different button mappings to each app. For voice input in coding tools such as Codex, route audio from your Mac or Siri Remote to on-device recognition or your preferred input method.
 
-**Beta.6 brings the glass interface, key-focus poses, sharper transparent model rendering and backend sessions without a fixed deadline.** [Read the beta.6 release notes](docs/releases/1.0.0-beta.6.md) and [UI/feature details](docs/updates/2026-10-16.md). Unified configuration, pointer improvements and automatic reconnection remain available.
+**Beta.7 brings the glass interface, key-focus poses, sharper transparent model rendering and backend sessions without a fixed deadline.** [Read the beta.7 release notes](docs/releases/1.0.0-beta.7.md) and [UI/feature details](docs/updates/2026-10-16.md). Unified configuration, pointer improvements and automatic reconnection remain available.
 
 ![New glass mapping panel and Siri side-button focus](docs/screenshots/mapping-siri-en.png)
 
 ## Download and install
 
-**[Download Xvico 1.0.0-beta.6 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.6/Xvico-1.0.0-beta.6-macos-arm64.dmg)** · [Alternative ZIP](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.6/Xvico-1.0.0-beta.6-macos-arm64.zip) · [Release notes and SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.6)
+**[Download Xvico 1.0.0-beta.7 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.7/Xvico-1.0.0-beta.7-macos-arm64.dmg)** · [Alternative ZIP](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.7/Xvico-1.0.0-beta.7-macos-arm64.zip) · [Release notes and SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.7)
 
 - **Apple Silicon (M1 or later), macOS 13 or later.** This build does not support Intel Macs.
 - Open the DMG, drag **Xvico** to **Applications**, then open it from Applications.
@@ -71,7 +71,7 @@ To use the Siri Remote microphone:
 - Supply the Apple capture runtime described below and approve the system audio backend through the administrator prompt.
 - Select **Xvico Microphone** in your input method or target app. If it cannot select its own device, you can explicitly set it as the system input in Xvico; this changes the default input used by other apps.
 - Choose **Save background approval** to approve helper installation once. Subsequent manual starts reuse approval, including after reopening the app. Installation and app launch never start capture. The original temporary, session-only approval remains available. Updating or removing the installed helper still requires an administrator.
-- Capture uses temporary Bluetooth diagnostics, which may include other devices. Its scope is explained before persistent or temporary approval. With beta.6 and its updated backend payload, a manually started session has no fixed time limit; stopping, quitting, system sleep or connection loss ends capture and restores diagnostics during normal cleanup. Remote microphone capture is still gated by your mappings; backend availability does not mean the microphone is continuously open.
+- Capture uses temporary Bluetooth diagnostics, which may include other devices. Its scope is explained before persistent or temporary approval. With beta.7 and its updated backend payload, a manually started session has no fixed time limit; stopping, quitting, system sleep or connection loss ends capture and restores diagnostics during normal cleanup. Remote microphone capture is still gated by your mappings; backend availability does not mean the microphone is continuously open.
 - **Preset Scenes → Restore initial mappings** restores volume, mute, mouse click and other initial mappings, pausing saved scenes without deleting their configuration. The last restore can be undone after relaunch. Re-enable an app scene to resume automatic switching with the foreground app.
 
 Local recognition requests on-device processing and does not fall back to an online recognition service. In input method mode, the selected input method determines the recognition service, network use and privacy policy. See [Security](SECURITY.md) for abnormal-termination considerations.

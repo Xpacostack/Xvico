@@ -8,13 +8,13 @@ Xvico 将 Apple TV 的 Siri Remote 变成面向 macOS 的语音编程（Vibe Cod
 
 **English overview:** Xvico turns Apple TV Siri Remote into a macOS controller for voice-driven coding (vibe coding), customizable per-app mappings, and touch navigation. Use voice input with coding tools such as Codex through on-device recognition or your preferred input method. [Read the English guide](README.en.md).
 
-**beta.6 已更新玻璃界面、按键聚焦与模型渲染，并取消语音后台会话的固定时限。** [查看 beta.6 更新说明](docs/releases/1.0.0-beta.6.md) · [新版 UI 与功能详解](docs/updates/2026-10-16.md)。配置热重载、点击拖动和自动重连等此前能力继续保留。
+**beta.7 已更新玻璃界面、按键聚焦与模型渲染，并取消语音后台会话的固定时限。** [查看 beta.7 更新说明](docs/releases/1.0.0-beta.7.md) · [新版 UI 与功能详解](docs/updates/2026-10-16.md)。配置热重载、点击拖动和自动重连等此前能力继续保留。
 
 ![新版玻璃映射面板与 Siri 侧键聚焦](docs/screenshots/mapping-siri-zh.png)
 
 ## 下载安装
 
-**[下载 Xvico 1.0.0-beta.6 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.6/Xvico-1.0.0-beta.6-macos-arm64.dmg)** · [ZIP 备用包](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.6/Xvico-1.0.0-beta.6-macos-arm64.zip) · [版本说明与 SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.6)
+**[下载 Xvico 1.0.0-beta.7 · DMG](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.7/Xvico-1.0.0-beta.7-macos-arm64.dmg)** · [ZIP 备用包](https://github.com/Xpacostack/Xvico/releases/download/v1.0.0-beta.7/Xvico-1.0.0-beta.7-macos-arm64.zip) · [版本说明与 SHA256](https://github.com/Xpacostack/Xvico/releases/tag/v1.0.0-beta.7)
 
 - **适用：Apple Silicon（M1 及更新芯片），macOS 13 或更新版本。** 此包不支持 Intel Mac。
 - 打开 DMG，将 **Xvico** 拖到 **Applications（应用程序）**，再从应用程序打开。
@@ -73,7 +73,7 @@ Xvico 将 Apple TV 的 Siri Remote 变成面向 macOS 的语音编程（Vibe Cod
 - 需要下述 Apple 音频采集运行时，以及系统语音后端的管理员批准。
 - 让输入法或目标应用选择 **Xvico Microphone**；若它不支持独立选择设备，可由用户在 Xvico 中将其设为系统输入。这会改变其他应用的默认输入。
 - 可选择「保存后台授权」：亲自批准一次后台安装后，后续手动启动可复用授权，重开应用仍有效；安装和重开应用不会自动采音。也可保留「仅启动本次」的临时授权方式。组件更新或移除后台仍需管理员批准。
-- 采集使用临时蓝牙诊断会话，可能涉及其他蓝牙设备的数据，首次保存授权或本次临时授权前会说明。使用 beta.6 并更新后台组件后，手动启动不设固定时长上限；主动停止、退出应用、系统睡眠或连接中断时结束采集并恢复临时诊断设置。遥控器麦克风仍按功能映射启停，后台待命不代表持续收音。
+- 采集使用临时蓝牙诊断会话，可能涉及其他蓝牙设备的数据，首次保存授权或本次临时授权前会说明。使用 beta.7 并更新后台组件后，手动启动不设固定时长上限；主动停止、退出应用、系统睡眠或连接中断时结束采集并恢复临时诊断设置。遥控器麦克风仍按功能映射启停，后台待命不代表持续收音。
 - **预设场景 → 恢复初始键位** 可恢复音量、静音、鼠标单击等初始映射，并暂停已有场景，保留其配置。支持撤销上次恢复；重新启用某个 App 场景后会继续根据前台应用自动切换。
 
 本机识别请求设备端处理，不回退到在线识别服务。输入法模式下，识别服务、联网行为和隐私政策由所选输入法决定。异常退出后的处理见 [安全说明](SECURITY.md)。

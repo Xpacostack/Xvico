@@ -47,9 +47,12 @@ final class SystemShortcutsService: ObservableObject {
     static func callbackRunURL(_ shortcut: SystemShortcut, token: UUID) -> URL {
         var components = URLComponents()
         components.scheme = "shortcuts"; components.host = "x-callback-url"; components.path = "/run-shortcut"
-        components.queryItems = [URLQueryItem(name: "name", value: shortcut.name)] + ["success", "error", "cancel"].map {
-            URLQueryItem(name: "x-" + $0, value: "xvico://shortcut/" + $0 + "?token=" + token.uuidString)
+        var queryItems: [URLQueryItem] = [URLQueryItem(name: "name", value: shortcut.name)]
+        for outcome in ["success", "error", "cancel"] {
+            let callback = "xvico://shortcut/\(outcome)?token=\(token.uuidString)"
+            queryItems.append(URLQueryItem(name: "x-\(outcome)", value: callback))
         }
+        components.queryItems = queryItems
         return components.url!
     }
     @discardableResult func handleCallback(_ url: URL) -> Bool {
