@@ -214,8 +214,8 @@ private struct XvicoRaisedGlassSurface: ViewModifier {
             }
             // Only the optical face and label move. The native backdrop stays
             // in window coordinates so perspective cannot corrupt its sampling.
-            .rotation3DEffect(.degrees(!reduceMotion && lifted ? (pointer.y - 0.5) * -5 : 0), axis: (x: 1, y: 0, z: 0))
-            .rotation3DEffect(.degrees(!reduceMotion && lifted ? (pointer.x - 0.5) * 5 : 0), axis: (x: 0, y: 1, z: 0))
+            .rotation3DEffect(.degrees(!reduceMotion && lifted ? (Double(pointer.y) - 0.5) * -5.0 : 0), axis: (x: 1, y: 0, z: 0))
+            .rotation3DEffect(.degrees(!reduceMotion && lifted ? (Double(pointer.x) - 0.5) * 5.0 : 0), axis: (x: 0, y: 1, z: 0))
             .scaleEffect(reduceMotion ? 1 : pressed ? 0.985 : lifted ? 1.018 : 1)
             .offset(y: reduceMotion ? 0 : pressed ? 1 : lifted ? -1.5 : 0)
             .background {

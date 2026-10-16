@@ -106,7 +106,7 @@ struct SceneBindingRow: View {
             }
     }
 
-    @ViewBuilder private var primaryControl: some View {
+    @MainActor @ViewBuilder private var primaryControl: some View {
         switch binding.action {
         case .key:
             Button { keyboardOpen = true } label: {
