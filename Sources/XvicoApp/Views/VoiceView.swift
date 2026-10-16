@@ -25,13 +25,13 @@ struct VoiceView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: XvicoLayout.sectionSpacing) {
                 SettingsSection(title: "语音输入", symbol: "waveform") {
-                    inputSettings
+                    VoiceStatusPanel(onToggle: toggleListening).disabled(authorization.busy || runtime.busy)
                     Divider().padding(.vertical, 2)
+                    inputSettings
                     if voice.inputSource == .siriRemote {
                         if !runtime.available { runtimeImport }
                         persistentAuthorization
                     }
-                    VoiceStatusPanel(onToggle: toggleListening).disabled(authorization.busy || runtime.busy)
                     recognizedText
                 }
                 voiceCommands
@@ -59,7 +59,7 @@ struct VoiceView: View {
             Button(XvicoLocalization.string("保存授权并安装后台", locale: model.interfaceLocale)) { Task { await authorization.install() } }
             Button(XvicoLocalization.string("仅启动本次（临时授权）", locale: model.interfaceLocale)) { startCapture(usePersistentApproval: false) }
         } message: {
-            XvicoLocalizedText("保存授权会安装仅供 Xvico 调用的系统后台，需要管理员批准一次；安装本身不启动采音。以后点击启动即可复用授权，重开应用仍有效。每次采集仍会临时启用 HCISkipAuth 与蓝牙文件日志，可能含其他设备数据，可能短暂影响蓝牙连接；单次最多一小时。停止或退出后删除临时采集并恢复诊断设置，系统日志可能另留。可随时移除后台授权。也可选择仅授权本次。")
+            XvicoLocalizedText("保存授权会安装仅供 Xvico 调用的系统后台，需要管理员批准一次；安装本身不启动采音。以后点击启动即可复用授权，重开应用仍有效。每次采集仍会临时启用 HCISkipAuth 与蓝牙文件日志，可能含其他设备数据，可能短暂影响蓝牙连接；启动后持续待命，直至主动停止、退出应用或连接中断。停止或退出后删除临时采集并恢复诊断设置，系统日志可能另留。可随时移除后台授权。也可选择仅授权本次。")
                 .environment(\.locale, model.interfaceLocale)
         }.alert(XvicoLocalization.string("移除已保存的后台授权？", locale: model.interfaceLocale), isPresented: $removeAuthorizationApproval) {
             Button(XvicoLocalization.string("取消", locale: model.interfaceLocale), role: .cancel) { }
@@ -69,7 +69,7 @@ struct VoiceView: View {
                 .environment(\.locale, model.interfaceLocale)
         }.sheet(isPresented: $showingVoiceCommands) {
             VStack(spacing: 0) {
-                HStack { Spacer(); Button("完成") { showingVoiceCommands = false } }.padding(12)
+                HStack { Spacer(); Button("完成") { showingVoiceCommands = false }.buttonStyle(XvicoToolbarButtonStyle(prominent: true)) }.padding(12)
                 VoiceCommandsEditorView()
             }.frame(width: 660, height: 520)
                 .xvicoGlassPanel(cornerRadius: 22, floating: true)
@@ -90,7 +90,7 @@ struct VoiceView: View {
             if !authorization.ready {
                 Button("保存后台授权") { captureApproval = true }.disabled(configurationLocked || !runtime.available)
             }
-        }.padding(13).xvicoGlassPanel(cornerRadius: 12)
+        }.padding(14).background(XvicoTheme.iconTile.opacity(0.45), in: RoundedRectangle(cornerRadius: 14))
     }
 
     private var runtimeImport: some View {
@@ -103,7 +103,7 @@ struct VoiceView: View {
                 Link("获取 Apple 官方工具", destination: URL(string: "https://developer.apple.com/download/all/")!)
                     .font(XvicoTypography.caption)
             }
-        }.padding(13).xvicoGlassPanel(cornerRadius: 12)
+        }.padding(14).background(XvicoTheme.iconTile.opacity(0.45), in: RoundedRectangle(cornerRadius: 14))
     }
 
     private var inputSettings: some View {
@@ -124,38 +124,49 @@ struct VoiceView: View {
                 Spacer()
                 Button { showingInputHelp.toggle() } label: {
                     Image(systemName: "questionmark.circle").font(.system(size: 14))
-                        .frame(width: 28, height: 28).contentShape(Rectangle())
+                        .frame(width: 40, height: 40).contentShape(Rectangle())
                 }.buttonStyle(.plain).foregroundStyle(XvicoTheme.secondaryText)
                     .help("了解当前输入方式").accessibilityLabel("了解当前输入方式")
                     .popover(isPresented: $showingInputHelp) { inputHelp.xvicoPresentationSettings() }
             }
             if voice.inputSource == .siriRemote {
                 if voice.recognitionMode == .inputMethod {
-                    VoiceSettingRow(title: "输入法触发键") {
-                        Picker("输入法触发键（无修饰键）", selection: $voice.inputMethodTriggerKey) {
-                            ForEach(KeyboardOutput.all) { XvicoLocalizedText($0.name).tag($0.name) }
-                        }.labelsHidden().controlSize(.large)
-                            .frame(width: XvicoLayout.keyboardPickerWidth(for: voice.inputMethodTriggerKey))
-                            .disabled(configurationLocked)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 16) {
+                            inputMethodTriggerRow.fixedSize(horizontal: true, vertical: false)
+                            Spacer(minLength: 8)
+                            virtualInputAction.fixedSize(horizontal: true, vertical: false)
+                        }
+                        VStack(alignment: .leading, spacing: 12) { inputMethodTriggerRow; virtualInputAction }
                     }
-                    VStack(alignment: .leading, spacing: 7) {
-                        Button("将 Xvico Microphone 设为系统输入") {
-                            do { model.show("系统输入：" + (try MacMicrophones.selectVirtualInput())) }
-                            catch { model.show(error.localizedDescription) }
-                        }.controlSize(.regular)
-                        XvicoLocalizedText("会更改其他应用的默认输入。输入法支持单独选设备时，可直接选择 Xvico Microphone。")
-                            .font(XvicoTypography.caption).foregroundStyle(XvicoTheme.secondaryText)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    XvicoLocalizedText("会更改其他应用的默认输入。输入法支持单独选设备时，可直接选择 Xvico Microphone。")
+                        .font(XvicoTypography.caption).foregroundStyle(XvicoTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
                 } else {
                     Toggle("按住 Siri 说话，松开后输入前台应用", isOn: $voice.remotePushToTalk)
-                        .toggleStyle(.switch).controlSize(.small)
+                        .toggleStyle(XvicoSwitchStyle()).controlSize(.small)
                         .disabled(voice.isListening || voice.isStarting || voice.isFinalizing)
                     XvicoLocalizedText("开启后 Siri 键用于语音输入；关闭后使用原按键映射。")
                         .font(XvicoTypography.caption).foregroundStyle(XvicoTheme.secondaryText)
                 }
             }
         }
+    }
+
+    private var inputMethodTriggerRow: some View {
+        VoiceSettingRow(title: "输入法触发键") {
+            Picker("输入法触发键（无修饰键）", selection: $voice.inputMethodTriggerKey) {
+                ForEach(KeyboardOutput.all) { XvicoLocalizedText($0.name).tag($0.name) }
+            }.labelsHidden().controlSize(.large)
+                .frame(width: XvicoLayout.keyboardPickerWidth(for: voice.inputMethodTriggerKey))
+                .disabled(configurationLocked)
+        }
+    }
+    private var virtualInputAction: some View {
+        Button("将 Xvico Microphone 设为系统输入") {
+            do { model.show("系统输入：" + (try MacMicrophones.selectVirtualInput())) }
+            catch { model.show(error.localizedDescription) }
+        }.controlSize(.regular)
     }
 
     private var inputHelp: some View {
@@ -234,13 +245,10 @@ struct VoiceView: View {
                         }.disabled(backend.busy || remoteVoice.isConnecting || remoteVoice.isSubscribed || voice.isListening)
                         Button("检查状态") { backend.refresh() }.disabled(backend.busy)
                     }
-                    if authorization.installed {
-                        Button("重新安装授权后台") { captureApproval = true }
-                            .disabled(configurationLocked || backend.busy)
-                        Button("移除后台授权") { removeAuthorizationApproval = true }
-                            .disabled(configurationLocked || backend.busy)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 8) { authorizationActions }
+                        VStack(alignment: .leading, spacing: 8) { authorizationActions }
                     }
-                    Button("检查后台授权") { authorization.refresh() }.disabled(authorization.busy)
                     if runtime.available {
                         Button("重新导入 Apple 运行时") { runtime.chooseRuntime(locale: model.interfaceLocale) }.disabled(configurationLocked)
                     }
@@ -266,6 +274,16 @@ struct VoiceView: View {
                 }.padding(.top, 8)
             }
         }
+    }
+
+    @ViewBuilder private var authorizationActions: some View {
+        if authorization.installed {
+            Button("重新安装授权后台") { captureApproval = true }
+                .disabled(configurationLocked || backend.busy)
+            Button("移除后台授权") { removeAuthorizationApproval = true }
+                .disabled(configurationLocked || backend.busy)
+        }
+        Button("检查后台授权") { authorization.refresh() }.disabled(authorization.busy)
     }
 
     private func startCapture(usePersistentApproval: Bool = true) {
@@ -366,9 +384,9 @@ private struct VoiceStatusPanel: View {
                         XvicoLocalizedLabel(active ? "停止聆听" : voice.inputSource == .siriRemote ? "启动系统语音后端" : "开始聆听",
                               systemImage: active ? "stop.fill" : "mic.fill")
                             .font(.system(size: 12, weight: .medium))
-                    }.buttonStyle(XvicoActionButtonStyle(prominent: true))
+                    }.buttonStyle(XvicoToolbarButtonStyle(prominent: true))
                 }
-            }.padding(14).background(XvicoTheme.iconTile.opacity(0.5), in: RoundedRectangle(cornerRadius: 11))
+            }.padding(16).frame(minHeight: 96).background(XvicoTheme.iconTile.opacity(0.45), in: RoundedRectangle(cornerRadius: 16))
         }
     }
 

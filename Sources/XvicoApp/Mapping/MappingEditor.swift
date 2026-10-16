@@ -4,29 +4,37 @@ import AppKit
 struct MappingView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var idleDismissal = MappingIdleDismissal()
     var body: some View {
         GeometryReader { geometry in
             let editorWidth = min(345, geometry.size.width * 0.45)
             ZStack(alignment: .leading) {
                 RemoteDrawing(selected: model.selectedKey, editorWidth: editorWidth) { key in
-                    withAnimation(.easeInOut(duration: 0.30)) { model.selectedKey = key }
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.38, dampingFraction: 0.88)) { model.selectedKey = key }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: min(565, geometry.size.height * 0.84))
-                .compositingGroup()
+                // Keep one viewport through the focus transition. Resizing it
+                // while SceneKit rotates would interrupt the native animation.
+                .frame(height: min(620, geometry.size.height * 0.88))
                 .shadow(color: .black.opacity(colorScheme == .dark ? 0.44 : 0.20), radius: 18, x: 8, y: 14)
                 .offset(y: -40)
                 if let key = model.selectedKey {
-                    MappingEditor(key: key, maximumHeight: geometry.size.height - 28)
+                    // Keep the glass shell stable when selecting another key;
+                    // only the captured editor state is replaced.
+                    VStack(spacing: 0) {
+                        MappingEditor(key: key, maximumHeight: geometry.size.height - 28)
+                            .id("\(model.editingGlobalMapping ? "global" : model.selectedSceneID?.uuidString ?? "default")-\(key.rawValue)")
+                            .transition(.opacity)
+                    }
                         .frame(width: editorWidth)
-                        .id("\(model.editingGlobalMapping ? "global" : model.selectedSceneID?.uuidString ?? "default")-\(key.rawValue)")
+                        .xvicoGlassPanel(cornerRadius: 24, floating: true)
                         .padding(.leading, max(32, min(110, geometry.size.width * 0.12)))
-                        .transition(.move(edge: .leading).combined(with: .opacity))
+                        .transition(reduceMotion ? .opacity : .offset(x: 18, y: 6).combined(with: .opacity))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(.easeInOut(duration: 0.30), value: model.selectedKey != nil)
+            .animation(reduceMotion ? nil : .spring(response: 0.38, dampingFraction: 0.88), value: model.selectedKey)
             .overlay(alignment: .bottom) {
                 if model.selectedKey == nil {
                     XvicoLocalizedLabel("按遥控器，或者是点击遥控器模型来编辑", systemImage: "hand.point.up.left.fill")
@@ -36,6 +44,7 @@ struct MappingView: View {
                 }
             }
         }
+        .environment(\.xvicoImmersiveGlass, true)
         .onAppear { updateIdleDismissal() }
         .onChange(of: model.selectedKey) { _ in updateIdleDismissal() }
         .onReceive(model.mappingInteraction) { _ in idleDismissal.recordActivity() }
@@ -45,7 +54,7 @@ struct MappingView: View {
     private func updateIdleDismissal() {
         if model.selectedKey != nil {
             idleDismissal.begin(isInteracting: { model.isHoldingRemoteButton }) {
-                withAnimation(.easeInOut(duration: 0.30)) { model.selectedKey = nil }
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.24)) { model.selectedKey = nil }
             }
         } else {
             idleDismissal.stop()
@@ -55,6 +64,7 @@ struct MappingView: View {
 
 struct MappingEditor: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let key: RemoteKey
     var maximumHeight: CGFloat = 660
     @State private var binding = KeyBinding(action: .key, value: "Return")
@@ -83,25 +93,24 @@ struct MappingEditor: View {
             VStack(alignment: .leading, spacing: key == .voice ? 14 : 17) {
                 HStack(spacing: 12) {
                     Image(systemName: key.symbol).font(.system(size: 23)).foregroundStyle(.blue)
-                        .frame(width: 48, height: 48).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 13))
+                        .frame(width: 48, height: 48).background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 13))
                     VStack(alignment: .leading, spacing: 4) {
                         XvicoLocalizedText(key.displayName).font(.system(size: 18, weight: .semibold))
                         XvicoLocalizedText(summary).font(XvicoTypography.body).foregroundStyle(XvicoTheme.secondaryText)
                     }
                     Spacer()
-                    Button { withAnimation(.easeInOut(duration: 0.30)) { model.selectedKey = nil } } label: {
+                    Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.24)) { model.selectedKey = nil } } label: {
                         Image(systemName: "xmark").font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 26, height: 26).background(Color.accentColor, in: Circle())
+                            .foregroundStyle(.primary)
                             .frame(width: 44, height: 44).contentShape(Rectangle())
-                    }.buttonStyle(.plain).help("关闭").accessibilityLabel("关闭")
+                    }.buttonStyle(XvicoInsetGlassButtonStyle(cornerRadius: 22)).help("关闭").accessibilityLabel("关闭")
                 }
                 Divider()
                 VStack(alignment: .leading, spacing: 9) {
                     caption(key == .power ? "电源键动作" : "按键动作")
-                    Picker(LocalizedStringKey(key == .power ? "电源键动作" : "按键动作"), selection: $binding.action) {
-                        ForEach(actionChoices) { action in XvicoLocalizedText(actionLabel(action)).tag(action) }
-                    }.pickerStyle(.segmented).labelsHidden()
+                    MappingActionPicker(title: key == .power ? "电源键动作" : "按键动作",
+                        selection: $binding.action,
+                        options: actionChoices.map { XvicoOption(value: $0, title: actionLabel($0)) })
                     if (key == .volumeUp || key == .volumeDown) && model.settings.volumeKeyMode != .key {
                     VStack(alignment: .leading, spacing: 8) {
                         XvicoLocalizedText("当前设备设置优先：\(model.settings.volumeKeyMode.rawValue)，下面的普通按键映射不会执行。")
@@ -136,7 +145,7 @@ struct MappingEditor: View {
                     }
                 }.disabled(!binding.enabled)
                 if key != .voice || binding.action == .click {
-                    Toggle("启用此按键", isOn: $binding.enabled).toggleStyle(.switch).font(.system(size: 13, weight: .semibold))
+                    Toggle("启用此按键", isOn: $binding.enabled).toggleStyle(XvicoSwitchStyle()).font(.system(size: 13, weight: .semibold))
                 }
             }
             .padding(20)
@@ -150,7 +159,6 @@ struct MappingEditor: View {
         .frame(height: min(contentHeight, maximumHeight))
         .font(XvicoTypography.body)
         .tint(.blue)
-        .xvicoGlassPanel(cornerRadius: 22, floating: true)
         .onAppear {
             binding = model.binding(for: key)
             if key == .voice && binding.action == .key { binding.enabled = true }
@@ -258,8 +266,47 @@ struct MappingEditor: View {
                     .help(LocalizedStringKey(description))
             }
             Spacer(minLength: 4)
-            Toggle(LocalizedStringKey(title), isOn: isOn).labelsHidden().toggleStyle(.switch).controlSize(.small)
+            Toggle(LocalizedStringKey(title), isOn: isOn).labelsHidden().toggleStyle(XvicoSwitchStyle()).controlSize(.small)
         }
+    }
+}
+
+private struct MappingActionPicker: View {
+    let title: String
+    @Binding var selection: XvicoAction
+    let options: [XvicoOption<XvicoAction>]
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var glassSelection
+
+    var body: some View {
+        HStack(spacing: 6) {
+                ForEach(options) { option in
+                    Button { selection = option.value } label: {
+                        XvicoLocalizedText(option.title)
+                            .font(.system(size: 11, weight: .semibold))
+                            .lineLimit(1).minimumScaleFactor(0.85)
+                            .padding(.horizontal, 4)
+                            .frame(maxWidth: .infinity, minHeight: 38)
+                            .foregroundStyle(XvicoTheme.optionForeground(selected: selection == option.value, scheme: scheme))
+                    }
+                    .buttonStyle(XvicoInsetGlassButtonStyle(selected: selection == option.value, cornerRadius: 11))
+                    .background {
+                        if selection == option.value {
+                            RoundedRectangle(cornerRadius: 11)
+                                .fill(Color.accentColor.opacity(scheme == .dark ? 0.16 : 0.10))
+                                .matchedGeometryEffect(id: "selection", in: glassSelection)
+                        }
+                    }
+                    .accessibilityLabel(LocalizedStringKey(option.title))
+                    .accessibilityAddTraits(selection == option.value ? .isSelected : [])
+                }
+        }
+        .padding(4)
+        .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 15))
+        .animation(reduceMotion ? nil : .spring(response: 0.30, dampingFraction: 0.86), value: selection)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(LocalizedStringKey(title))
     }
 }
 

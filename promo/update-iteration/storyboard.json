@@ -1,0 +1,311 @@
+{
+  "title": "Xvico · 新版 UI 升级与功能迭代",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "duration": 40,
+  "language": "zh-Hans",
+  "music": {
+    "bpm": 124,
+    "style": "Original electronic pulse, glass accents, synthesized locally",
+    "voiceover": false
+  },
+  "scenes": [
+    {
+      "id": "hero",
+      "start": 0,
+      "end": 3,
+      "eyebrow": "新版 UI · 功能迭代",
+      "title": "Xvico，\n这次更顺手。",
+      "subtitle": ""
+    },
+    {
+      "id": "glass",
+      "start": 3,
+      "end": 9,
+      "eyebrow": "界面升级",
+      "title": "玻璃新界面，\n信息更清楚。",
+      "subtitle": ""
+    },
+    {
+      "id": "focus",
+      "start": 9,
+      "end": 15,
+      "eyebrow": "按键聚焦",
+      "title": "选中按键，\n模型跟着转。",
+      "subtitle": ""
+    },
+    {
+      "id": "touch",
+      "start": 15,
+      "end": 21,
+      "eyebrow": "操控升级",
+      "title": "点得更稳，\n拖得更远。",
+      "subtitle": ""
+    },
+    {
+      "id": "reconnect",
+      "start": 21,
+      "end": 26,
+      "eyebrow": "连接恢复",
+      "title": "重新连接，\n操作自动恢复。",
+      "subtitle": ""
+    },
+    {
+      "id": "configuration",
+      "start": 26,
+      "end": 31,
+      "eyebrow": "配置升级",
+      "title": "统一配置，\n支持热重载。",
+      "subtitle": ""
+    },
+    {
+      "id": "voice",
+      "start": 31,
+      "end": 36,
+      "eyebrow": "语音迭代",
+      "title": "语音会话，\n取消固定时限。",
+      "subtitle": ""
+    },
+    {
+      "id": "outro",
+      "start": 36,
+      "end": 40,
+      "eyebrow": "Xvico",
+      "title": "界面更轻盈。\n操作更顺手。",
+      "subtitle": ""
+    }
+  ],
+  "keyTimes": [
+    1.6,
+    6.2,
+    11.2,
+    18.3,
+    24.4,
+    29.3,
+    34.1,
+    38.5
+  ],
+  "proofTimes": [
+    0,
+    2.8,
+    3.4,
+    5,
+    8.7,
+    9.4,
+    12.2,
+    13,
+    14.8,
+    15.6,
+    16.8,
+    20.6,
+    21.5,
+    22.8,
+    25.6,
+    26.5,
+    27.6,
+    30.7,
+    31.4,
+    32.7,
+    35.6,
+    36.5,
+    39.8
+  ],
+  "transitionTimes": [
+    0,
+    3,
+    5.7,
+    9,
+    12.4,
+    15,
+    17.5,
+    21,
+    23.5,
+    26,
+    28,
+    31,
+    32.5,
+    36
+  ],
+  "sfxClicks": [
+    6,
+    9.8,
+    12.7,
+    16.3,
+    18.6,
+    23.6,
+    28.2,
+    32.8
+  ],
+  "remoteMotion": [
+    {
+      "time": 0,
+      "x": 570,
+      "y": 1140,
+      "width": 1020,
+      "yaw": -0.72,
+      "pitch": -0.04,
+      "roll": -0.12
+    },
+    {
+      "time": 2.5,
+      "x": 560,
+      "y": 1140,
+      "width": 1020,
+      "yaw": -0.32,
+      "pitch": -0.02,
+      "roll": -0.06
+    },
+    {
+      "time": 4.1,
+      "x": 755,
+      "y": 1120,
+      "width": 940,
+      "yaw": -0.22,
+      "pitch": 0,
+      "roll": -0.03
+    },
+    {
+      "time": 8.3,
+      "x": 745,
+      "y": 1115,
+      "width": 930,
+      "yaw": -0.38,
+      "pitch": -0.03,
+      "roll": -0.05
+    },
+    {
+      "time": 10.1,
+      "x": 760,
+      "y": 1120,
+      "width": 970,
+      "yaw": -0.6,
+      "pitch": -0.06,
+      "roll": -0.1
+    },
+    {
+      "time": 12.2,
+      "x": 755,
+      "y": 1110,
+      "width": 960,
+      "yaw": -0.54,
+      "pitch": -0.06,
+      "roll": -0.08
+    },
+    {
+      "time": 13.3,
+      "x": 750,
+      "y": 1110,
+      "width": 960,
+      "yaw": -0.2,
+      "pitch": -0.025,
+      "roll": -0.025
+    },
+    {
+      "time": 14.7,
+      "x": 750,
+      "y": 1110,
+      "width": 960,
+      "yaw": -0.22,
+      "pitch": -0.02,
+      "roll": -0.03
+    },
+    {
+      "time": 16.5,
+      "x": 300,
+      "y": 1130,
+      "width": 940,
+      "yaw": -0.06,
+      "pitch": 0,
+      "roll": 0.02
+    },
+    {
+      "time": 20.4,
+      "x": 310,
+      "y": 1130,
+      "width": 940,
+      "yaw": -0.08,
+      "pitch": -0.01,
+      "roll": -0.02
+    },
+    {
+      "time": 22,
+      "x": 760,
+      "y": 1110,
+      "width": 930,
+      "yaw": -0.28,
+      "pitch": -0.02,
+      "roll": -0.05
+    },
+    {
+      "time": 25.4,
+      "x": 750,
+      "y": 1100,
+      "width": 920,
+      "yaw": -0.2,
+      "pitch": -0.02,
+      "roll": -0.02
+    },
+    {
+      "time": 27,
+      "x": 750,
+      "y": 1110,
+      "width": 930,
+      "yaw": -0.4,
+      "pitch": -0.04,
+      "roll": -0.07
+    },
+    {
+      "time": 30.4,
+      "x": 755,
+      "y": 1110,
+      "width": 920,
+      "yaw": -0.32,
+      "pitch": -0.02,
+      "roll": -0.04
+    },
+    {
+      "time": 32.4,
+      "x": 350,
+      "y": 1090,
+      "width": 880,
+      "yaw": -0.58,
+      "pitch": -0.06,
+      "roll": -0.1
+    },
+    {
+      "time": 35.4,
+      "x": 345,
+      "y": 1085,
+      "width": 880,
+      "yaw": -0.5,
+      "pitch": -0.04,
+      "roll": -0.08
+    },
+    {
+      "time": 37.3,
+      "x": 740,
+      "y": 1135,
+      "width": 900,
+      "yaw": -0.56,
+      "pitch": -0.06,
+      "roll": -0.12
+    },
+    {
+      "time": 40,
+      "x": 720,
+      "y": 1130,
+      "width": 900,
+      "yaw": -0.36,
+      "pitch": -0.03,
+      "roll": -0.06
+    }
+  ],
+  "provenance": {
+    "ui": "Current 2026-10-16 actual Xvico screenshots, cropped to the relevant controls.",
+    "model": "Application USDZ, one persistent 3D layer throughout 40 seconds, including the outro.",
+    "graphics": "Pointer/drag, reconnect, configuration and voice timing are explanatory motion graphics, not recordings of measured hardware timing.",
+    "features": "Claims checked against local source, release notes and recorded tests; updated voice backend required to remove the fixed duration limit.",
+    "scope": "New UI and functional iteration; no on-screen version count or fabricated release number."
+  }
+}

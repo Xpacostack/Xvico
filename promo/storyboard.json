@@ -81,7 +81,7 @@
     "project": "focus-timer",
     "firstPrompt": "帮我做一个深色番茄钟网页，有开始、暂停和重置按钮。",
     "secondPrompt": "改成青绿色，再加一个任务列表。",
-    "note": "Actual Xvico window captures and focused real controls; one continuous USDZ model, composed click/voice/Codex animations. No microphone capture or recognition-speed benchmark."
+    "note": "Current 2026-10-16 UI captures and actual controls; single high-resolution USDZ with continuous full pose. No visible hit-zone outlines. Scripted voice/Codex demo, no microphone capture."
   },
   "proofTimes": [
     2.8,
@@ -95,7 +95,11 @@
     8.5,
     9.4,
     10,
+    10.65,
     12,
+    12.25,
+    12.75,
+    13.1,
     13.5,
     14.5,
     15.5,
@@ -195,30 +199,47 @@
       "x": 0,
       "y": 0,
       "width": 0,
-      "yaw": -0.06,
-      "registration": "siri"
+      "yaw": -0.58,
+      "registration": "siri",
+      "pitch": -0.06,
+      "roll": -0.1
     },
     {
       "time": 7.8,
       "x": 0,
       "y": 0,
       "width": 0,
-      "yaw": -0.06,
-      "registration": "siri"
+      "yaw": -0.58,
+      "registration": "siri",
+      "pitch": -0.06,
+      "roll": -0.1
     },
     {
       "time": 10,
       "x": 785,
       "y": 212,
       "width": 585,
-      "yaw": -0.42
+      "yaw": -0.58,
+      "pitch": -0.06,
+      "roll": -0.1
     },
     {
-      "time": 12.4,
+      "time": 12.15,
       "x": 785,
       "y": 212,
       "width": 585,
-      "yaw": -0.42
+      "yaw": -0.58,
+      "pitch": -0.06,
+      "roll": -0.1
+    },
+    {
+      "time": 12.95,
+      "x": 785,
+      "y": 212,
+      "width": 585,
+      "yaw": -0.2,
+      "pitch": -0.025,
+      "roll": -0.025
     },
     {
       "time": 15.4,
@@ -253,63 +274,82 @@
       "x": 112.5,
       "y": 210,
       "width": 605,
-      "yaw": -0.06
+      "yaw": -0.06,
+      "pitch": -0.04,
+      "roll": -0.07
     },
     {
       "time": 26.7,
       "x": 420,
       "y": 210,
       "width": 600,
-      "yaw": -0.5
+      "yaw": -0.5,
+      "pitch": -0.04,
+      "roll": -0.07
     },
     {
       "time": 27,
       "x": 420,
       "y": 210,
       "width": 600,
-      "yaw": -0.5
+      "yaw": -0.5,
+      "pitch": -0.04,
+      "roll": -0.07
     },
     {
       "time": 28.9,
       "x": 32,
       "y": 230,
       "width": 310,
-      "yaw": -0.5
+      "yaw": -0.5,
+      "pitch": -0.04,
+      "roll": -0.07
     },
     {
       "time": 31.4,
       "x": 32,
       "y": 230,
       "width": 310,
-      "yaw": -0.5
+      "yaw": -0.5,
+      "pitch": -0.04,
+      "roll": -0.07
     },
     {
       "time": 33,
       "x": -10,
       "y": 215,
       "width": 260,
-      "yaw": -0.48
+      "yaw": -0.48,
+      "pitch": -0.04,
+      "roll": -0.07
     },
     {
       "time": 35.2,
       "x": 35,
       "y": 510,
       "width": 330,
-      "yaw": -0.48
+      "yaw": -0.48,
+      "pitch": -0.04,
+      "roll": -0.07
     },
     {
       "time": 39.6,
       "x": 35,
       "y": 510,
       "width": 330,
-      "yaw": -0.48
+      "yaw": -0.48,
+      "pitch": -0.04,
+      "roll": -0.07
     },
     {
       "time": 40.85,
       "x": 35,
       "y": 510,
       "width": 330,
-      "yaw": -0.48
+      "yaw": -0.48,
+      "pitch": -0.04,
+      "roll": -0.07
     }
-  ]
+  ],
+  "uiRevision": "2026-10-16 glass sidebar + key focus + high resolution model"
 }

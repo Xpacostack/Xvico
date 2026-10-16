@@ -1,7 +1,7 @@
 # 语音启停与连接恢复 / Voice lifecycle and recovery
 
-本文描述1.0.0-beta.5的语音与连接行为。
-This document describes voice and connection behavior in 1.0.0-beta.5.
+本文描述当前源码的语音与连接行为；已发布 beta.5 仍有单次一小时上限，以下取消时限的行为需要更新后的后台组件。
+This document describes the current source. Published beta.5 retains its one-hour limit; unlimited sessions below require the updated backend payload.
 
 ## 正常使用 / Normal use
 
@@ -9,9 +9,9 @@ This document describes voice and connection behavior in 1.0.0-beta.5.
 - 在语音设置点击“启动系统语音后端”，通道就绪后再使用已配置的遥控器映射。
 - 输入法模式按实际配置的触发键切换遥控器收音。单击、双击和长按仍由功能映射决定；没有把 Siri 固定成某一种操作。
 - 点击“停止聆听”或退出应用，会关闭遥控器麦克风并停止当前采集。若硬件停止命令失败，界面会保留错误，清理或下一次触发可重试，不把失败当成已关闭。
-- 当前后端仍有单次一小时上限。本轮没有延长会话、改变诊断设置范围或增加自动采集。
+- 手动启动的后端不设固定时长上限；主动停止、退出、睡眠或连接中断时结束。没有改变诊断设置范围或增加自动采集；后台待命不代表遥控器麦克风持续收音。
 
-Backend installation approval and capture sessions are separate. Relaunching the app keeps the saved approval for the same payload but does not start capture. Start the system voice backend in Voice Settings before using remote voice mappings. In input method mode, the configured trigger toggles microphone capture; single press, double press and hold remain user mappings. Stop Listening or quitting closes the microphone and capture session. A failed hardware stop remains visible and retryable. The existing one-hour session limit and diagnostic scope are unchanged.
+Backend installation approval and capture sessions are separate. Relaunching the app keeps the saved approval for the same payload but does not start capture. Start the system voice backend in Voice Settings before using remote voice mappings. In input method mode, the configured trigger toggles microphone capture; single press, double press and hold remain user mappings. Stop Listening or quitting closes the microphone and capture session. A failed hardware stop remains visible and retryable. Manually started sessions have no fixed time limit and end on stop, quit, sleep or connection loss. Diagnostic scope is unchanged, and backend availability does not keep the remote microphone open. Updated backend binaries require a one-time administrator-approved update; existing input/privacy permissions do not need resetting.
 
 ## 中断与恢复 / Interruption and recovery
 

@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-16",
+  "source": "Actual current-source Xvico windows, Chinese and English, light appearance",
+  "originalsUnmodified": true,
+  "files": {
+    "device-en.png": {
+      "bytes": 125452,
+      "sha256": "8790fd2bf6c15ac80edade8b0149440d8509c3b3adc691e7bcfb1cc23f341370"
+    },
+    "device-zh.png": {
+      "bytes": 101169,
+      "sha256": "83a2c045ca2cbeeeeae2068a9e93c43f079cf95db2395271ba59cc8dcd6128a5"
+    },
+    "mapping-en.png": {
+      "bytes": 58804,
+      "sha256": "210b9808eb6bbda736102fdd1c5d8bae4e8bc1196a89245e4e2e6314ffd1d95b"
+    },
+    "mapping-siri-en.png": {
+      "bytes": 124515,
+      "sha256": "2eaa9e36943dd3ce673d05ecd4ea156fdc3ee05e2c90fbc0f73b071fcc3ba78c"
+    },
+    "mapping-siri-zh.png": {
+      "bytes": 108552,
+      "sha256": "2263460018fe004e6eb66fa848446a9ae962cdfa1dd0a45c40661a725c766355"
+    },
+    "mapping-zh.png": {
+      "bytes": 56603,
+      "sha256": "157decfcbf49950b89cd7fd4396b934931e89702386a0fdb369f6473eb48bcce"
+    },
+    "scene-editor-en.png": {
+      "bytes": 74367,
+      "sha256": "16dd023a792869353c4ff9f7c414d80c9c3cb4ba3e3da8cb2f1114c793601e28"
+    },
+    "scene-editor-zh.png": {
+      "bytes": 69271,
+      "sha256": "d6fdc96af71ddfa36018bccceda6193f9095438eacb3b087a5c049fc9fdb0805"
+    },
+    "scenes-en.png": {
+      "bytes": 129584,
+      "sha256": "efa76adbcea532dda3895053397b1ca13ea8969a3eaf2bac33f1645eda52c054"
+    },
+    "scenes-zh.png": {
+      "bytes": 113854,
+      "sha256": "f221a834182732f575221b1f822702bb415eaae0bd23c0cece0f36a016f7b9a8"
+    },
+    "voice-en.png": {
+      "bytes": 105905,
+      "sha256": "aadc17bfb11cf4fbe0db0a6251499585280560d0207fd3a8578f3a48919c6a3c"
+    },
+    "voice-zh.png": {
+      "bytes": 88569,
+      "sha256": "d2b18005e9fc9e49b7d436d875f091b3e9a5e9fb428d793c92b6da7ddb604181"
+    }
+  }
+}

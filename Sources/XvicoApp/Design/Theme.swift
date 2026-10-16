@@ -3,45 +3,34 @@ import AppKit
 
 enum XvicoTheme {
     static let card = Color(nsColor: NSColor(name: nil) { appearance in
-        let dark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        return dark ? NSColor(red: 0.105, green: 0.145, blue: 0.20, alpha: 1)
-                    : NSColor.white
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(white: 28.0 / 255, alpha: 1) : .white
     })
     static let border = Color(nsColor: .separatorColor)
     static let iconTile = Color(nsColor: NSColor(name: nil) { appearance in
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            ? NSColor(red: 0.14, green: 0.19, blue: 0.26, alpha: 1)
-            : NSColor(red: 0.90, green: 0.94, blue: 0.98, alpha: 1)
+            ? NSColor(white: 44.0 / 255, alpha: 1)
+            : NSColor(red: 242.0 / 255, green: 242.0 / 255, blue: 247.0 / 255, alpha: 1)
     })
-    static let secondaryText = Color(nsColor: NSColor(name: nil) { appearance in
-        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            ? NSColor(red: 0.74, green: 0.80, blue: 0.87, alpha: 1)
-            : NSColor(red: 0.29, green: 0.34, blue: 0.41, alpha: 1)
-    })
+    static let secondaryText = Color(nsColor: .secondaryLabelColor)
     static func canvas(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(red: 0.045, green: 0.065, blue: 0.10)
-                        : Color(red: 0.965, green: 0.978, blue: 0.995)
+        scheme == .dark ? .black : Color(red: 242.0 / 255, green: 242.0 / 255, blue: 247.0 / 255)
     }
     static func panelSurface(_ scheme: ColorScheme, floating: Bool = false) -> Color {
-        scheme == .dark ? Color(red: 0.105, green: 0.145, blue: 0.20).opacity(floating ? 0.76 : 0.86)
-                        : Color.white.opacity(floating ? 0.75 : 0.88)
+        (scheme == .dark ? Color(white: 28.0 / 255) : .white).opacity(floating ? 0.75 : 0.90)
     }
     static func sidebarSurface(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(red: 0.065, green: 0.09, blue: 0.135).opacity(0.94)
-                        : Color(red: 0.91, green: 0.95, blue: 0.99).opacity(0.92)
+        scheme == .dark ? Color.black.opacity(0.92) : canvas(scheme).opacity(0.92)
     }
     static func selectionTint(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(red: 0.18, green: 0.40, blue: 0.48).opacity(0.60)
-                        : Color.accentColor.opacity(0.22)
+        Color.accentColor.opacity(scheme == .dark ? 0.15 : 0.10)
     }
     static func selectionOutline(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(red: 0.48, green: 0.76, blue: 0.83).opacity(0.85)
-                        : Color.accentColor.opacity(0.42)
+        Color.accentColor.opacity(scheme == .dark ? 0.70 : 0.45)
     }
-    static let darkSelectionSurface = Color(red: 0.16, green: 0.31, blue: 0.38).opacity(0.78)
+    static let darkSelectionSurface = Color.accentColor.opacity(0.16)
     static func optionForeground(selected: Bool, scheme: ColorScheme) -> Color {
-        if selected { return scheme == .dark ? .primary : .accentColor }
-        return scheme == .dark ? .primary.opacity(0.85) : .primary
+        selected ? (scheme == .dark ? Color(red: 0.38, green: 0.70, blue: 1) : .accentColor) : .primary
     }
 }
 
@@ -49,6 +38,46 @@ enum XvicoTypography {
     static let sectionTitle = Font.system(size: 14, weight: .semibold)
     static let body = Font.system(size: 12)
     static let caption = Font.system(size: 11)
+}
+
+struct XvicoSwitchStyle: ToggleStyle {
+    @Environment(\.controlSize) private var size
+    @Environment(\.isEnabled) private var enabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var dimensions: CGSize {
+        switch size {
+        case .mini: CGSize(width: 28, height: 16)
+        case .small: CGSize(width: 32, height: 18)
+        default: CGSize(width: 38, height: 22)
+        }
+    }
+
+    func makeBody(configuration: Configuration) -> some View {
+        LabeledContent {
+            Button { configuration.isOn.toggle() } label: {
+                Capsule()
+                    .fill(configuration.isOn ? Color(red: 0.20, green: 0.78, blue: 0.35) : Color.secondary.opacity(0.35))
+                    .overlay(alignment: configuration.isOn ? .trailing : .leading) {
+                        Circle().fill(.white)
+                            .shadow(color: .black.opacity(0.16), radius: 1, y: 1)
+                            .frame(width: dimensions.height - 4, height: dimensions.height - 4)
+                            .padding(2)
+                    }
+                    .frame(width: dimensions.width, height: dimensions.height)
+                    .padding(.vertical, 3)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .opacity(enabled ? 1 : 0.40)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: configuration.isOn)
+        } label: {
+            configuration.label
+        }
+        // Preserve native switch accessibility, including its state/actions,
+        // while keeping the enabled color independent of macOS accent/focus.
+        .accessibilityRepresentation { Toggle(configuration).toggleStyle(.switch) }
+    }
 }
 
 enum XvicoLayout {
@@ -74,26 +103,16 @@ enum XvicoNavigation {
 
 struct XvicoWindowBackdrop: View {
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
     var body: some View {
-        ZStack {
-            XvicoTheme.canvas(colorScheme)
-            if !reduceTransparency {
-                RadialGradient(colors: [.blue.opacity(colorScheme == .dark ? 0.15 : 0.08), .clear],
-                               center: .topTrailing, startRadius: 0, endRadius: 760)
-                RadialGradient(colors: [.cyan.opacity(colorScheme == .dark ? 0.09 : 0.045), .clear],
-                               center: .bottomLeading, startRadius: 0, endRadius: 580)
-                RadialGradient(colors: [.indigo.opacity(colorScheme == .dark ? 0.08 : 0.035), .clear],
-                               center: .bottomTrailing, startRadius: 0, endRadius: 540)
-            }
-        }.ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
+        XvicoTheme.canvas(colorScheme)
+            .ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
     }
 }
 
 private struct XvicoGlassPanel: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.xvicoImmersiveGlass) private var immersive
     let cornerRadius: CGFloat
     let tint: Color?
     let interactive: Bool
@@ -121,9 +140,10 @@ private struct XvicoGlassPanel: ViewModifier {
             }
         }
         .overlay { outline(shape) }
-        .shadow(color: .black.opacity(bordered ? (floating ? (colorScheme == .dark ? 0.32 : 0.17) : 0.055) : 0),
+        .shadow(color: .black.opacity(immersive && floating ? 0 : bordered ? (floating ? (colorScheme == .dark ? 0.32 : 0.17) : 0.055) : 0),
                 radius: floating ? 24 : 9, x: 0, y: floating ? 14 : 3)
-        .shadow(color: .black.opacity(bordered && floating ? 0.08 : 0), radius: 3, x: 0, y: 1)
+        .shadow(color: .black.opacity(bordered && floating && !immersive ? 0.08 : 0), radius: 3, x: 0, y: 1)
+        .xvicoPointerLight(cornerRadius: cornerRadius, active: immersive && (interactive || floating), subtle: floating)
     }
 
     @ViewBuilder private func translucentSurface(_ content: Content, shape: RoundedRectangle) -> some View {
@@ -131,8 +151,23 @@ private struct XvicoGlassPanel: ViewModifier {
         // older SDK. Keep macOS 13+ source builds working with older Xcodes.
         #if compiler(>=6.2) && !XVICO_LEGACY_MATERIAL
         if #available(macOS 26.0, *) {
-            content.background(XvicoTheme.panelSurface(colorScheme, floating: floating), in: shape)
-                .glassEffect(.clear.tint(tint).interactive(interactive), in: shape)
+            if immersive {
+                // Glass samples only the background. Keep every label above
+                // the optical layer rather than inside a sampling container.
+                content.background {
+                    ZStack {
+                        if floating { XvicoFrostedBackdrop(cornerRadius: cornerRadius) }
+                        XvicoNativeClearGlass(cornerRadius: cornerRadius, tint: tint, interactive: interactive,
+                                             surfaceOpacity: floating ? (colorScheme == .dark ? 0.34 : 0.24) : 1)
+                    }
+                        .shadow(color: .black.opacity(floating ? (colorScheme == .dark ? 0.24 : 0.11) : 0),
+                                radius: 18, x: 0, y: 10)
+                        .allowsHitTesting(false)
+                }
+            } else {
+                content.background(XvicoTheme.panelSurface(colorScheme, floating: floating), in: shape)
+                    .glassEffect(.clear.tint(tint).interactive(interactive), in: shape)
+            }
         } else {
             materialSurface(content, shape: shape)
         }
@@ -142,14 +177,20 @@ private struct XvicoGlassPanel: ViewModifier {
     }
 
     private func materialSurface(_ content: Content, shape: RoundedRectangle) -> some View {
-        content.background(XvicoTheme.panelSurface(colorScheme, floating: floating), in: shape)
+        content.background(XvicoTheme.panelSurface(colorScheme, floating: floating).opacity(immersive ? 0.30 : 1), in: shape)
             .background(.ultraThinMaterial, in: shape)
             .background(tint?.opacity(0.4) ?? .clear, in: shape)
     }
 
     @ViewBuilder private func outline(_ shape: RoundedRectangle) -> some View {
         if bordered {
-            ZStack {
+            if immersive {
+                shape.strokeBorder(LinearGradient(
+                    colors: [.white.opacity(colorScheme == .dark ? 0.50 : 0.90),
+                             .white.opacity(0.10), Color.primary.opacity(0.16), .white.opacity(0.42)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.75)
+                    .allowsHitTesting(false)
+            } else { ZStack {
                 shape.strokeBorder(LinearGradient(
                     colors: [.white.opacity(colorScheme == .dark ? (floating ? 0.50 : 0.29) : 0.98),
                              .white.opacity(colorScheme == .dark ? 0.12 : 0.30),
@@ -157,7 +198,7 @@ private struct XvicoGlassPanel: ViewModifier {
                              .white.opacity(colorScheme == .dark ? 0.32 : 0.72)],
                     startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: floating ? 1.4 : 1)
                 shape.inset(by: 2).strokeBorder(.white.opacity(colorScheme == .dark ? 0.08 : 0.32), lineWidth: 0.5)
-            }.allowsHitTesting(false)
+            }.allowsHitTesting(false) }
         }
     }
 }
@@ -170,30 +211,69 @@ extension View {
     }
 }
 
+/// The foreground is a plain button. Native glass samples only its backing,
+/// so the window accent cannot turn every navigation item into a solid fill.
 struct XvicoGlassButtonStyle: ButtonStyle {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var selected = false
     var tint: Color? = nil
     var cornerRadius: CGFloat = 14
 
-    func makeBody(configuration: Configuration) -> some View {
+    var raised = false
+
+    @ViewBuilder func makeBody(configuration: Configuration) -> some View {
+        if raised {
+            XvicoRaisedGlassButtonStyle(selected: selected, cornerRadius: cornerRadius).makeBody(configuration: configuration)
+        } else { flatBody(configuration) }
+    }
+
+    @ViewBuilder private func flatBody(_ configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         configuration.label
-            .background {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(selected && colorScheme == .dark ? XvicoTheme.darkSelectionSurface : .clear)
-                    .xvicoGlassPanel(cornerRadius: cornerRadius,
-                        tint: tint ?? (selected ? XvicoTheme.selectionTint(colorScheme) : nil), interactive: true)
-            }
+            .background { opticalSurface(shape).allowsHitTesting(false) }
             .overlay {
+                shape.strokeBorder(LinearGradient(
+                    colors: [.white.opacity(colorScheme == .dark ? 0.52 : 0.95),
+                             .white.opacity(0.06), Color.primary.opacity(0.14), .white.opacity(0.30)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.85)
+                    .allowsHitTesting(false)
                 if selected {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .strokeBorder(XvicoTheme.selectionOutline(colorScheme), lineWidth: colorScheme == .dark ? 1.5 : 1)
+                    shape.strokeBorder(XvicoTheme.selectionOutline(colorScheme), lineWidth: 1)
                         .allowsHitTesting(false)
                 }
             }
-            .opacity(configuration.isPressed ? 0.78 : 1)
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
-            .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .xvicoPointerLight(cornerRadius: cornerRadius, active: true)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.975 : 1)
+            .opacity(configuration.isPressed ? 0.83 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.80), value: configuration.isPressed)
+            .contentShape(shape)
+    }
+
+    @ViewBuilder private func opticalSurface(_ shape: RoundedRectangle) -> some View {
+        if reduceTransparency {
+            shape.fill(XvicoTheme.card)
+        } else {
+            #if compiler(>=6.2) && !XVICO_LEGACY_MATERIAL
+            if #available(macOS 26.0, *) {
+                shape.fill(.clear).glassEffect(.clear.interactive(), in: shape)
+                    .overlay { lensRim(shape) }
+            } else { shape.fill(.ultraThinMaterial).overlay { lensRim(shape) } }
+            #else
+            shape.fill(.ultraThinMaterial).overlay { lensRim(shape) }
+            #endif
+        }
+    }
+
+    private func lensRim(_ shape: RoundedRectangle) -> some View {
+        ZStack {
+            shape.fill(LinearGradient(
+                colors: [.white.opacity(colorScheme == .dark ? 0.11 : 0.40), .clear,
+                         .white.opacity(colorScheme == .dark ? 0.025 : 0.10)],
+                startPoint: .topLeading, endPoint: .bottomTrailing))
+            shape.inset(by: 2).strokeBorder(.white.opacity(colorScheme == .dark ? 0.09 : 0.40), lineWidth: 0.5)
+        }
     }
 }
 
@@ -216,14 +296,14 @@ struct XvicoOptionPicker<Value: Hashable>: View {
                 Button { selection = option.value } label: {
                     HStack(spacing: 7) {
                         if let symbol = option.symbol { Image(systemName: symbol).font(.system(size: 15, weight: .medium)) }
-                        Text(LocalizedStringKey(option.title)).font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                        Text(LocalizedStringKey(option.title)).font(.system(size: 12, weight: .semibold)).lineLimit(2).multilineTextAlignment(.center)
                         Image(systemName: "checkmark.circle.fill").font(.system(size: 12))
                             .opacity(selection == option.value ? 1 : 0)
                     }.frame(maxWidth: .infinity).frame(minHeight: 42)
                         .padding(.horizontal, 8)
                         .foregroundStyle(XvicoTheme.optionForeground(selected: selection == option.value, scheme: colorScheme))
                         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }.buttonStyle(XvicoGlassButtonStyle(selected: selection == option.value, cornerRadius: 12))
+                }.buttonStyle(XvicoToolbarButtonStyle(prominent: selection == option.value))
                     .accessibilityLabel(LocalizedStringKey(option.title))
                     .accessibilityAddTraits(selection == option.value ? .isSelected : [])
             }
@@ -235,16 +315,9 @@ struct XvicoOptionPicker<Value: Hashable>: View {
 }
 
 struct XvicoActionButtonStyle: ButtonStyle {
-    @Environment(\.colorScheme) private var colorScheme
     var prominent = false
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 12, weight: .semibold))
-            .padding(.horizontal, 14).frame(minHeight: 36)
-            .foregroundStyle(prominent && colorScheme != .dark ? Color.accentColor : Color.primary)
-            .xvicoGlassPanel(cornerRadius: 12, tint: prominent ? XvicoTheme.selectionTint(colorScheme) : nil, interactive: true)
-            .opacity(configuration.isPressed ? 0.75 : 1)
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        XvicoToolbarButtonStyle(prominent: prominent).makeBody(configuration: configuration)
     }
 }
 

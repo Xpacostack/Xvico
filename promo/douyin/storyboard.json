@@ -1,0 +1,302 @@
+{
+  "title": "Xvico · 最新交互更新 / 科技竖屏版",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "duration": 32,
+  "language": "zh-Hans",
+  "music": {
+    "bpm": 124,
+    "style": "Original electronic pulse, glass accents, synthesized locally",
+    "voiceover": false
+  },
+  "scenes": [
+    {
+      "id": "hero",
+      "start": 0,
+      "end": 3,
+      "eyebrow": "LATEST UPDATE",
+      "title": "遥控器，也能\n开启创造。",
+      "subtitle": ""
+    },
+    {
+      "id": "glass",
+      "start": 3,
+      "end": 7,
+      "eyebrow": "01 / GLASS",
+      "title": "交互，\n焕然一新。",
+      "subtitle": ""
+    },
+    {
+      "id": "focus",
+      "start": 7,
+      "end": 12,
+      "eyebrow": "02 / FOCUS",
+      "title": "点到哪里，\n视线就到哪里。",
+      "subtitle": ""
+    },
+    {
+      "id": "presets",
+      "start": 12,
+      "end": 16,
+      "eyebrow": "03 / WORKFLOW",
+      "title": "你的应用，\n你的映射。",
+      "subtitle": ""
+    },
+    {
+      "id": "voice",
+      "start": 16,
+      "end": 21,
+      "eyebrow": "04 / VOICE",
+      "title": "按住 Siri，\n说出下一步。",
+      "subtitle": ""
+    },
+    {
+      "id": "coding",
+      "start": 21,
+      "end": 26,
+      "eyebrow": "VIBE CODING",
+      "title": "想法，\n进入 Coding。",
+      "subtitle": ""
+    },
+    {
+      "id": "result",
+      "start": 26,
+      "end": 29,
+      "eyebrow": "BUILD & ITERATE",
+      "title": "再说一句，\n继续迭代。",
+      "subtitle": ""
+    },
+    {
+      "id": "outro",
+      "start": 29,
+      "end": 32,
+      "eyebrow": "Xvico",
+      "title": "拿起遥控器。\n说出下一步。",
+      "subtitle": ""
+    }
+  ],
+  "keyTimes": [
+    1.7,
+    5.2,
+    8.6,
+    14.1,
+    18.8,
+    24.5,
+    28,
+    30.8
+  ],
+  "proofTimes": [
+    0.3,
+    2.8,
+    3.3,
+    6.7,
+    7.3,
+    9.8,
+    10.5,
+    11.7,
+    12.4,
+    15.6,
+    16.4,
+    19.8,
+    20.7,
+    21.5,
+    22.8,
+    25.7,
+    26.4,
+    28.7,
+    29.4,
+    31.7
+  ],
+  "transitionTimes": [
+    0,
+    3,
+    7,
+    10,
+    12,
+    16,
+    19,
+    21,
+    23,
+    26,
+    29
+  ],
+  "sfxClicks": [
+    7.8,
+    10.3,
+    14.2,
+    17.2,
+    22.8,
+    26.5
+  ],
+  "remoteMotion": [
+    {
+      "time": 0,
+      "x": 570,
+      "y": 1140,
+      "width": 1020,
+      "yaw": -0.78,
+      "pitch": -0.04,
+      "roll": -0.14
+    },
+    {
+      "time": 2.6,
+      "x": 560,
+      "y": 1140,
+      "width": 1020,
+      "yaw": -0.34,
+      "pitch": -0.02,
+      "roll": -0.08
+    },
+    {
+      "time": 4.2,
+      "x": 710,
+      "y": 1110,
+      "width": 970,
+      "yaw": -0.2,
+      "pitch": 0,
+      "roll": -0.03
+    },
+    {
+      "time": 6.6,
+      "x": 730,
+      "y": 1110,
+      "width": 960,
+      "yaw": -0.36,
+      "pitch": -0.02,
+      "roll": -0.06
+    },
+    {
+      "time": 8.1,
+      "x": 768,
+      "y": 1110,
+      "width": 960,
+      "yaw": -0.6,
+      "pitch": -0.06,
+      "roll": -0.1
+    },
+    {
+      "time": 9.8,
+      "x": 755,
+      "y": 1110,
+      "width": 960,
+      "yaw": -0.54,
+      "pitch": -0.06,
+      "roll": -0.08
+    },
+    {
+      "time": 10.9,
+      "x": 755,
+      "y": 1110,
+      "width": 960,
+      "yaw": -0.2,
+      "pitch": -0.025,
+      "roll": -0.025
+    },
+    {
+      "time": 11.7,
+      "x": 748,
+      "y": 1110,
+      "width": 960,
+      "yaw": -0.22,
+      "pitch": -0.02,
+      "roll": -0.04
+    },
+    {
+      "time": 13.4,
+      "x": 340,
+      "y": 1100,
+      "width": 870,
+      "yaw": -0.3,
+      "pitch": -0.02,
+      "roll": 0.05
+    },
+    {
+      "time": 15.5,
+      "x": 350,
+      "y": 1080,
+      "width": 875,
+      "yaw": -0.34,
+      "pitch": -0.02,
+      "roll": 0.02
+    },
+    {
+      "time": 17.4,
+      "x": 495,
+      "y": 1055,
+      "width": 870,
+      "yaw": -0.62,
+      "pitch": -0.06,
+      "roll": -0.12
+    },
+    {
+      "time": 19.2,
+      "x": 480,
+      "y": 1035,
+      "width": 830,
+      "yaw": -0.54,
+      "pitch": -0.04,
+      "roll": -0.08
+    },
+    {
+      "time": 21.5,
+      "x": 710,
+      "y": 820,
+      "width": 410,
+      "yaw": -0.46,
+      "pitch": -0.04,
+      "roll": -0.07
+    },
+    {
+      "time": 24.8,
+      "x": 730,
+      "y": 820,
+      "width": 410,
+      "yaw": -0.36,
+      "pitch": -0.02,
+      "roll": -0.04
+    },
+    {
+      "time": 26.9,
+      "x": 270,
+      "y": 1280,
+      "width": 570,
+      "yaw": -0.4,
+      "pitch": -0.04,
+      "roll": -0.08
+    },
+    {
+      "time": 28.5,
+      "x": 280,
+      "y": 1250,
+      "width": 590,
+      "yaw": -0.42,
+      "pitch": -0.04,
+      "roll": -0.06
+    },
+    {
+      "time": 30.1,
+      "x": 730,
+      "y": 1150,
+      "width": 890,
+      "yaw": -0.56,
+      "pitch": -0.06,
+      "roll": -0.12
+    },
+    {
+      "time": 32,
+      "x": 715,
+      "y": 1130,
+      "width": 890,
+      "yaw": -0.4,
+      "pitch": -0.03,
+      "roll": -0.07
+    }
+  ],
+  "provenance": {
+    "ui": "Real 2026-10-16 current Xvico captures; latest raised glass navigation, green switches and key focus. Cropped for portrait readability.",
+    "model": "Original application SiriRemote.usdz; one persistent rendered layer through all 960 frames.",
+    "demo": "Scripted voice transcription and Codex-style programming demonstration; not live speech recognition, a measured generation benchmark, or an OpenAI endorsement.",
+    "safeMargins": "Composition choice: principal titles and UI kept away from the far right and bottom. Not a claim of an official platform template."
+  }
+}

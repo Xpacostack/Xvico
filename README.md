@@ -8,9 +8,9 @@ Xvico 将 Apple TV 的 Siri Remote 变成面向 macOS 的语音编程（Vibe Cod
 
 **English overview:** Xvico turns Apple TV Siri Remote into a macOS controller for voice-driven coding (vibe coding), customizable per-app mappings, and touch navigation. Use voice input with coding tools such as Codex through on-device recognition or your preferred input method. [Read the English guide](README.en.md).
 
-beta.5 新增[统一配置与热重载](docs/configuration.md)、点击稳定与拖动加速，并完善按键释放、语音启停和遥控器重连恢复。[查看本次更新](docs/releases/1.0.0-beta.5.md)。
+当前源码已更新玻璃界面、按键聚焦与模型渲染，并取消语音后台会话的固定时限。[查看新版 UI 与功能更新](docs/updates/2026-10-16.md)。现有公开下载仍为 beta.5；其配置热重载、点击拖动与重连改进见[beta.5 发布说明](docs/releases/1.0.0-beta.5.md)。
 
-![Xvico 功能映射主页与可旋转的 3D Siri Remote](docs/screenshots/mapping-zh.png)
+![新版玻璃映射面板与 Siri 侧键聚焦](docs/screenshots/mapping-siri-zh.png)
 
 ## 下载安装
 
@@ -35,16 +35,16 @@ beta.5 新增[统一配置与热重载](docs/configuration.md)、点击稳定与
 
 ## 界面预览
 
-以下为当前 Xvico 的真实界面。点击图片可查看大图；截图中的映射是示例配置，可自行修改。
+以下为 2026-10-16 从当前源码构建的 Xvico 真实界面，展示新版 UI。点击图片可查看大图；截图中的映射是示例配置，可自行修改。
 
 | 预设场景                 | 按应用编辑按键                       |
 | -------------------- | ----------------------------- |
-| 预设库与已绑定的应用场景         | 应用场景的外圈和独立按键配置                |
+| [![预设库与已绑定的应用场景](docs/screenshots/scenes-zh.png)](docs/screenshots/scenes-zh.png) | [![应用场景的外圈和独立按键配置](docs/screenshots/scene-editor-zh.png)](docs/screenshots/scene-editor-zh.png) |
 | 从常用预设开始，也可添加自己的应用场景。 | 在同一个编辑器里设置该 App 的外圈、按键动作和快捷键。 |
 
 | 语音输入                         | 设备与权限                   |
 | ---------------------------- | ----------------------- |
-| 麦克风来源、识别方式和输入法触发键            | 权限状态、遥控器连接和触控设置         |
+| [![麦克风来源、识别方式和输入法触发键](docs/screenshots/voice-zh.png)](docs/screenshots/voice-zh.png) | [![权限状态与遥控器连接](docs/screenshots/device-zh.png)](docs/screenshots/device-zh.png) |
 | 选择麦克风来源及识别方式，按自己的输入法规则配置触发键。 | 查看权限与连接状态，调整遥控器输入及触控手感。 |
 
 [中英文截图索引](docs/screenshots/README.md)
@@ -73,7 +73,7 @@ beta.5 新增[统一配置与热重载](docs/configuration.md)、点击稳定与
 - 需要下述 Apple 音频采集运行时，以及系统语音后端的管理员批准。
 - 让输入法或目标应用选择 **Xvico Microphone**；若它不支持独立选择设备，可由用户在 Xvico 中将其设为系统输入。这会改变其他应用的默认输入。
 - 可选择「保存后台授权」：亲自批准一次后台安装后，后续手动启动可复用授权，重开应用仍有效；安装和重开应用不会自动采音。也可保留「仅启动本次」的临时授权方式。组件更新或移除后台仍需管理员批准。
-- 采集使用临时蓝牙诊断会话，可能涉及其他蓝牙设备的数据，首次保存授权或本次临时授权前会说明。单次后端会话最长一小时，正常停止后恢复临时诊断设置；到期后可再次启动，已保存的后台授权不随会话到期失效。
+- 采集使用临时蓝牙诊断会话，可能涉及其他蓝牙设备的数据，首次保存授权或本次临时授权前会说明。当前源码构建并更新后台组件后，手动启动不设固定时长上限（公开 beta.5 仍为单次一小时）；主动停止、退出应用、系统睡眠或连接中断时结束采集并恢复临时诊断设置。遥控器麦克风仍按功能映射启停，后台待命不代表持续收音。
 - **预设场景 → 恢复初始键位** 可恢复音量、静音、鼠标单击等初始映射，并暂停已有场景，保留其配置。支持撤销上次恢复；重新启用某个 App 场景后会继续根据前台应用自动切换。
 
 本机识别请求设备端处理，不回退到在线识别服务。输入法模式下，识别服务、联网行为和隐私政策由所选输入法决定。异常退出后的处理见 [安全说明](SECURITY.md)。

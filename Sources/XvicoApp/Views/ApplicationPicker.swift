@@ -48,7 +48,7 @@ struct ApplicationPicker: View {
             HStack {
                 Text("选择一个 App").font(.system(size: 17, weight: .semibold))
                 Spacer()
-                Button("取消", action: onCancel).buttonStyle(.borderedProminent)
+                Button("取消", action: onCancel).buttonStyle(XvicoToolbarButtonStyle())
             }.padding(16)
             Divider()
             ScrollView {
@@ -59,8 +59,9 @@ struct ApplicationPicker: View {
                                 ApplicationIcon(bundleID: app.id, size: 24)
                                 Text(app.name).font(.system(size: 14))
                                 Spacer()
-                            }.padding(.horizontal, 16).frame(height: 40).contentShape(Rectangle())
-                        }.buttonStyle(.plain).accessibilityLabel(app.name)
+                            }.padding(.horizontal, 16).frame(height: 52).contentShape(Rectangle())
+                        }.buttonStyle(XvicoInsetGlassButtonStyle(cornerRadius: 12)).accessibilityLabel(app.name)
+                            .padding(.horizontal, 8)
                         if app.id != choices.last?.id { Divider().padding(.leading, 52).padding(.trailing, 16) }
                     }
                 }.padding(.vertical, 8)

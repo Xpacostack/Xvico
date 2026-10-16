@@ -325,7 +325,7 @@
 "未识别的按键：%@，请重新录制" = "Touche non reconnue : %@. Enregistrez-la de nouveau.";
 "本机模型不可用" = "Modèle local indisponible";
 "本机模型可用" = "Modèle local disponible";
-"本次自动配置遥控器语音所需的蓝牙诊断参数，由 Apple PacketLogger 接收蓝牙数据并提取遥控器音频；这会启用 HCISkipAuth 和系统文件日志，日志可能包含其他蓝牙设备数据。临时采集文件停止后删除，原诊断设置会恢复；系统自行产生的日志可能另行保留。操作可能短暂影响蓝牙连接，最多持续一小时，并需要系统管理员批准。" = "Cette session configure automatiquement le diagnostic Bluetooth et utilise Apple PacketLogger pour extraire le son de la télécommande. Elle active HCISkipAuth et les journaux système, qui peuvent inclure les données d’autres appareils Bluetooth. Les fichiers temporaires sont supprimés et les réglages d’origine rétablis à l’arrêt ; les journaux générés par le système peuvent rester. Les connexions Bluetooth peuvent être brièvement affectées. La session dure au maximum une heure et nécessite l’approbation administrateur.";
+"本次自动配置遥控器语音所需的蓝牙诊断参数，由 Apple PacketLogger 接收蓝牙数据并提取遥控器音频；这会启用 HCISkipAuth 和系统文件日志，日志可能包含其他蓝牙设备数据。临时采集文件停止后删除，原诊断设置会恢复；系统自行产生的日志可能另行保留。操作可能短暂影响蓝牙连接，启动后持续待命，直至主动停止、退出应用或连接中断；需要系统管理员批准。" = "Cette session configure automatiquement le diagnostic Bluetooth et utilise Apple PacketLogger pour extraire le son de la télécommande. Elle active HCISkipAuth et les journaux système, qui peuvent inclure les données d’autres appareils Bluetooth. Les fichiers temporaires sont supprimés et les réglages d’origine rétablis à l’arrêt ; les journaux générés par le système peuvent rester. Les connexions Bluetooth peuvent être brièvement affectées. Une fois démarrée, la session reste disponible jusqu’à l’arrêt, la fermeture de l’application ou la perte de connexion et nécessite l’approbation administrateur.";
 "权限" = "Autorisations";
 "松开" = "Relâché";
 "某个 App 在最前面时，自动套用它的映射规则。" = "Applique automatiquement les règles d’une app lorsqu’elle est au premier plan.";
@@ -404,7 +404,7 @@
 "第一次点击仍执行原功能；第二次切换外圈动作。不使用可关闭此功能。" = "Le premier appui garde son action d’origine ; le second change l’action de l’anneau. Choisissez Non utilisé pour désactiver cette fonction.";
 "等待 Siri Remote 连接" = "En attente de la Siri Remote";
 "等待 Siri Remote 音频（未使用 Mac 麦克风）" = "En attente du son Siri Remote (sans utiliser le microphone du Mac)";
-"等待 Siri Remote 音频；临时采集最多持续一小时" = "En attente du son Siri Remote ; la capture temporaire dure une heure maximum";
+"等待 Siri Remote 音频；停止或退出应用时结束采集" = "En attente du son Siri Remote ; la capture se termine à l’arrêt ou à la fermeture de l’application";
 "等待「快捷指令.app」返回执行结果…" = "En attente du résultat de l’application Raccourcis…";
 "等待系统授权" = "En attente de l’autorisation système";
 "等待系统管理员批准" = "En attente de l’approbation administrateur";
@@ -583,7 +583,7 @@
 "一次安装，按需启动；记住授权不会持续收音。" = "Une seule installation, un démarrage à la demande. L’autorisation mémorisée ne laisse pas le micro enregistrer.";
 "仅启动本次（临时授权）" = "Démarrer cette session uniquement (autorisation temporaire)";
 "保存后台授权" = "Mémoriser l’autorisation";
-"保存授权会安装仅供 Xvico 调用的系统后台，需要管理员批准一次；安装本身不启动采音。以后点击启动即可复用授权，重开应用仍有效。每次采集仍会临时启用 HCISkipAuth 与蓝牙文件日志，可能含其他设备数据，可能短暂影响蓝牙连接；单次最多一小时。停止或退出后删除临时采集并恢复诊断设置，系统日志可能另留。可随时移除后台授权。也可选择仅授权本次。" = "Mémoriser l’autorisation installe un service système réservé à Xvico, avec une seule approbation administrateur. L’installation ne démarre pas la capture. Les démarrages suivants réutilisent cette autorisation, même après réouverture. Chaque capture active temporairement HCISkipAuth et les journaux Bluetooth, qui peuvent inclure d’autres appareils et affecter brièvement les connexions. Chaque session dure au maximum une heure. L’arrêt ou la fermeture supprime les captures temporaires et restaure les réglages ; les journaux système peuvent subsister. Le service peut être retiré à tout moment. Vous pouvez aussi autoriser uniquement cette session.";
+"保存授权会安装仅供 Xvico 调用的系统后台，需要管理员批准一次；安装本身不启动采音。以后点击启动即可复用授权，重开应用仍有效。每次采集仍会临时启用 HCISkipAuth 与蓝牙文件日志，可能含其他设备数据，可能短暂影响蓝牙连接；启动后持续待命，直至主动停止、退出应用或连接中断。停止或退出后删除临时采集并恢复诊断设置，系统日志可能另留。可随时移除后台授权。也可选择仅授权本次。" = "Mémoriser l’autorisation installe un service système réservé à Xvico, avec une seule approbation administrateur. L’installation ne démarre pas la capture. Les démarrages suivants réutilisent cette autorisation, même après réouverture. Chaque capture active temporairement HCISkipAuth et les journaux Bluetooth, qui peuvent inclure d’autres appareils et affecter brièvement les connexions. Une fois démarrée, la session reste disponible jusqu’à l’arrêt, la fermeture de l’application ou la perte de connexion. L’arrêt ou la fermeture supprime les captures temporaires et restaure les réglages ; les journaux système peuvent subsister. Le service peut être retiré à tout moment. Vous pouvez aussi autoriser uniquement cette session.";
 "保存授权并安装后台" = "Mémoriser et installer le service";
 "后台安装未通过文件核对，请重试" = "La vérification des fichiers a échoué après installation. Réessayez.";
 "后台授权已保存，按需启动采集" = "Autorisation mémorisée. Capture à la demande.";
@@ -718,3 +718,9 @@
 "遥控器输入连接已中断；连接恢复后请重新启动系统语音后端" = "La connexion d’entrée de la télécommande a été interrompue. Redémarrez le service vocal système après la reconnexion.";
 
 "通过 Telegram 联系开发者" = "Contacter le développeur sur Telegram";
+
+"当前生效" = "Actif actuellement";
+"已启用" = "Activé";
+"已暂停" = "En pause";
+"编辑中" = "En cours de modification";
+"场景操作" = "Actions du scénario";

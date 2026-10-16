@@ -6,9 +6,9 @@
 
 Xvico turns Apple TV Siri Remote into a macOS controller for voice-driven coding (vibe coding), customizable per-app mappings, and touch navigation. Move the pointer, scroll conversations and code, switch apps or tasks, and assign different button mappings to each app. For voice input in coding tools such as Codex, route audio from your Mac or Siri Remote to on-device recognition or your preferred input method.
 
-Beta.5 adds [unified configuration and hot reload](docs/configuration.md), click stabilization and drag acceleration, and improves key releases, voice lifecycle and remote reconnection. [See what changed](docs/releases/1.0.0-beta.5.md).
+Current source adds the glass interface, key-focus poses, sharper transparent model rendering and backend sessions without a fixed deadline. [Read the UI and feature updates](docs/updates/2026-10-16.md). Public downloads remain beta.5; see its [release notes](docs/releases/1.0.0-beta.5.md) for configuration, pointer and reconnection changes.
 
-![Xvico Function Mapping with a rotatable 3D Siri Remote](docs/screenshots/mapping-en.png)
+![New glass mapping panel and Siri side-button focus](docs/screenshots/mapping-siri-en.png)
 
 ## Download and install
 
@@ -33,7 +33,7 @@ Beta.5 adds [unified configuration and hot reload](docs/configuration.md), click
 
 ## Screenshots
 
-These are actual screenshots of the current Xvico interface. Click an image for the full-size view. The mappings shown are examples and can be edited.
+These actual screenshots were recaptured on 2026-10-16 from a current-source build with the new UI. Click an image for the full-size view. The mappings shown are examples and can be edited.
 
 | Scene presets | Per-app button editor |
 | --- | --- |
@@ -71,7 +71,7 @@ To use the Siri Remote microphone:
 - Supply the Apple capture runtime described below and approve the system audio backend through the administrator prompt.
 - Select **Xvico Microphone** in your input method or target app. If it cannot select its own device, you can explicitly set it as the system input in Xvico; this changes the default input used by other apps.
 - Choose **Save background approval** to approve helper installation once. Subsequent manual starts reuse approval, including after reopening the app. Installation and app launch never start capture. The original temporary, session-only approval remains available. Updating or removing the installed helper still requires an administrator.
-- Capture uses temporary Bluetooth diagnostics, which may include other devices. Its scope is explained before persistent or temporary approval. A session lasts up to one hour; ordinary shutdown restores diagnostics. You can start another session after expiry without losing saved background approval.
+- Capture uses temporary Bluetooth diagnostics, which may include other devices. Its scope is explained before persistent or temporary approval. After building the current source and updating the backend payload, a manually started session has no fixed time limit (public beta.5 retains its one-hour limit); stopping, quitting, system sleep or connection loss ends capture and restores diagnostics during normal cleanup. Remote microphone capture is still gated by your mappings; backend availability does not mean the microphone is continuously open.
 - **Preset Scenes → Restore initial mappings** restores volume, mute, mouse click and other initial mappings, pausing saved scenes without deleting their configuration. The last restore can be undone after relaunch. Re-enable an app scene to resume automatic switching with the foreground app.
 
 Local recognition requests on-device processing and does not fall back to an online recognition service. In input method mode, the selected input method determines the recognition service, network use and privacy policy. See [Security](SECURITY.md) for abnormal-termination considerations.

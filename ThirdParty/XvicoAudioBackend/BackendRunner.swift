@@ -24,8 +24,8 @@ private var interrupted: sig_atomic_t = 0
             try? sessionDirectory.create("backend-ended")
         }
         try capture.run()
-        let limit = Date().addingTimeInterval(3600)
-        while capture.isRunning && interrupted == 0 && kill(pid, 0) == 0 && Date() < limit {
+        // A manually started session lasts until stop, client loss or child failure.
+        while capture.isRunning && interrupted == 0 && kill(pid, 0) == 0 {
             if sessionDirectory.exists("stop") { break }
             if router.executableURL == nil,
                let data = try? sessionDirectory.read("ready.json"),

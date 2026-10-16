@@ -1,22 +1,34 @@
 {
-  "source": "Local dist/Xvico.app, actual window captures",
-  "date": "2026-10-14",
+  "source": "Current local dist/Xvico.app, actual window captures",
+  "date": "2026-10-16",
+  "dimensions": [
+    1180,
+    810
+  ],
   "files": {
+    "app-device.png": {
+      "bytes": 101686,
+      "sha256": "371c79ef7db87ccaefd0687bb493930d9be452362a7f24140b6c9e24592ef5eb"
+    },
     "app-mapping-main.png": {
-      "bytes": 235508,
-      "sha256": "3d98224d92f11a697ba1588449ef1a0712932dd578101b06c5bd52352a031cae"
+      "bytes": 56603,
+      "sha256": "4e9673a6d7e07684a89d5e4769f6112beed10c3ba2467e4a27e2b5e9cdb260bf"
     },
     "app-scenes.png": {
-      "bytes": 365357,
-      "sha256": "77d1349fb21b24f957e9e86aa78e8fffe107538e55ba6e8a8ea999bf79a6e076"
+      "bytes": 113264,
+      "sha256": "e817082979ad55f760a1cfea76cc11365ac3003b3f98d8f9112c51692335ed60"
     },
     "app-siri-mapping.png": {
-      "bytes": 354579,
-      "sha256": "50b729b411fbfcf7fbeaaa352716372c58bbcd6f6f83092f424d2d883f74411d"
+      "bytes": 108359,
+      "sha256": "92ac24d4c2fca9971d3014044d803a387d54004b454950eb74963921a7c97084"
     },
     "app-voice.png": {
-      "bytes": 314904,
-      "sha256": "24814e7dc58ba622d2b45827aacdd2cda9164c57f636c9d14310705c6d43a79c"
+      "bytes": 94101,
+      "sha256": "15b2f8aa2f0de95059305f8c574ef54bd234fa77c9be4a94ffaa8c0c62d21ce3"
+    },
+    "app-volume-mapping.png": {
+      "bytes": 83422,
+      "sha256": "3629f88bae7420e732ac4552e5173ed2a75e0a4e94751c75de74e3c306bff4ee"
     }
   },
   "originalsUnmodified": true,

@@ -61,25 +61,7 @@ struct DeviceView: View {
                     }
                     XvicoLocalizedText("麦克风与语音识别由应用请求授权，系统页面无需也无法手动添加应用。已拒绝时在对应隐私设置中开启。").font(.caption).foregroundStyle(XvicoTheme.secondaryText)
                 }
-                SettingsSection(title: "遥控器输入源", symbol: "switch.2") {
-                    HStack { VStack(alignment: .leading, spacing: 4) { XvicoLocalizedText("快速连接遥控器").font(.headline); XvicoLocalizedText("重新扫描上次使用的 Siri Remote。").font(.caption).foregroundStyle(XvicoTheme.secondaryText) }; Spacer(); Button("快速连接") { model.reidentifyRemote(); model.startRemoteVoiceConnection() }.buttonStyle(XvicoActionButtonStyle(prominent: true)) }
-                    statusLine("Siri Remote 按键", model.remoteStatus)
-                    statusLine("Siri Remote 触控板", model.touchStatus)
-                    DisclosureGroup("输入诊断", isExpanded: $inputDiagnosticsExpanded) {
-                        if inputDiagnosticsExpanded { RemoteDiagnosticsView() }
-                    }
-                    Button("重新识别遥控器触控板") { model.reidentifyRemote() }
-                    HStack(alignment: .top, spacing: 16) {
-                        VStack(alignment: .leading, spacing: 5) {
-                            XvicoLocalizedText("阻止遥控器触发系统关机（推荐）").font(.headline)
-                            XvicoLocalizedText("只拦截遥控器的按键接口，触控板使用的接口保持独立，不会影响鼠标移动。Xvico 运行期间请保持开启。").font(.caption).foregroundStyle(XvicoTheme.secondaryText)
-                        }
-                        Spacer(minLength: 8)
-                        Toggle("阻止遥控器触发系统关机（推荐）", isOn: $model.settings.interceptRemoteButtons).labelsHidden().toggleStyle(.switch)
-                    }
-                    if let detail = model.powerInterceptionDetail { XvicoLocalizedText(detail).font(.caption).foregroundStyle(XvicoTheme.secondaryText) }
-                    XvicoLocalizedLabel(model.powerIntercepted ? "系统电源动作已拦截" : "系统电源动作未拦截", systemImage: model.powerIntercepted ? "checkmark.shield.fill" : "exclamationmark.shield.fill").font(.caption).foregroundStyle(model.powerIntercepted ? .green : .orange)
-                }
+                remoteInputSection
                 SettingsSection(title: "触控板", symbol: "hand.draw") {
                     Toggle("启用触控板输入", isOn: $model.settings.touchEnabled)
                     XvicoLocalizedText("关闭后不移动光标、外圈手势不生效；五个机械点击区仍使用独立按键映射。").font(.caption).foregroundStyle(XvicoTheme.secondaryText)
@@ -229,6 +211,7 @@ struct DeviceView: View {
                     }
                 }
             }.font(XvicoTypography.body).frame(maxWidth: XvicoLayout.contentWidth).padding(XvicoLayout.pageInset)
+                .frame(maxWidth: .infinity)
         }
         .buttonStyle(XvicoActionButtonStyle())
         .onReceive(permissionTimer) { _ in
@@ -241,7 +224,7 @@ struct DeviceView: View {
             if microphoneLabel != microphone { microphoneLabel = microphone }
             if speechLabel != speech { speechLabel = speech }
         }
-        .toggleStyle(.switch)
+        .toggleStyle(XvicoSwitchStyle())
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didActivateApplicationNotification)) { _ in accessibilityGranted = AXIsProcessTrusted(); inputGranted = IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted }
         .sheet(isPresented: $showingGuide) {
             VStack(alignment: .leading, spacing: 16) {
@@ -250,20 +233,94 @@ struct DeviceView: View {
                 XvicoLocalizedText("2. 在功能映射页点击 3D 模型配置机械按键；拖动松手后模型自动回正。")
                 XvicoLocalizedText("3. 设备设置配置指针、外圈、音量键和双击切换；App 场景可覆盖默认映射。")
                 XvicoLocalizedText("4. 在语音设置中选择 Mac 或 Siri Remote 麦克风，使用本机识别或输入法语音输入。").foregroundStyle(XvicoTheme.secondaryText)
-                HStack { Spacer(); Button("完成") { showingGuide = false }.buttonStyle(.borderedProminent) }
+                HStack { Spacer(); Button("完成") { showingGuide = false }.buttonStyle(XvicoToolbarButtonStyle(prominent: true)) }
             }.padding(24).frame(width: 500)
                 .xvicoGlassPanel(cornerRadius: 22, floating: true)
                 .xvicoPresentationSettings()
         }
     }
+    private var remoteInputSection: some View {
+        SettingsSection(title: "遥控器输入源", symbol: "switch.2") {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 16) { remoteConnectionDescription; Spacer(minLength: 8); remoteConnectionActions }
+                VStack(alignment: .leading, spacing: 12) { remoteConnectionDescription; remoteConnectionActions }
+            }
+            HStack(alignment: .top, spacing: 12) {
+                RemoteChannelTile(title: "Siri Remote 按键", symbol: "button.programmable", status: model.remoteStatus,
+                                  ready: model.running && model.remoteConnected)
+                RemoteChannelTile(title: "Siri Remote 触控板", symbol: "hand.draw", status: model.touchStatus,
+                                  ready: model.running && model.touchStatus.hasPrefix("已连接"))
+            }
+            DisclosureGroup("输入诊断", isExpanded: $inputDiagnosticsExpanded) {
+                if inputDiagnosticsExpanded { RemoteDiagnosticsView() }
+            }.padding(.vertical, 4)
+            Divider()
+            HStack(alignment: .center, spacing: 14) {
+                Image(systemName: model.powerIntercepted ? "checkmark.shield.fill" : "shield")
+                    .font(.system(size: 22)).foregroundStyle(model.powerIntercepted ? Color.green : Color.secondary)
+                    .frame(width: 44, height: 44)
+                    .background(Color.green.opacity(0.07), in: RoundedRectangle(cornerRadius: 13))
+                VStack(alignment: .leading, spacing: 6) {
+                    XvicoLocalizedText("阻止遥控器触发系统关机（推荐）").font(.system(size: 13, weight: .semibold))
+                    XvicoLocalizedText("只拦截遥控器的按键接口，触控板使用的接口保持独立，不会影响鼠标移动。Xvico 运行期间请保持开启。")
+                        .font(.caption).foregroundStyle(XvicoTheme.secondaryText).fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                Toggle("阻止遥控器触发系统关机（推荐）", isOn: $model.settings.interceptRemoteButtons)
+                    .labelsHidden().toggleStyle(XvicoSwitchStyle())
+            }
+            XvicoStatusBadge(title: model.powerIntercepted ? "系统电源动作已拦截" : "系统电源动作未拦截",
+                             symbol: model.powerIntercepted ? "checkmark.shield.fill" : "exclamationmark.shield.fill",
+                             color: model.powerIntercepted ? .green : .orange)
+            if let detail = model.powerInterceptionDetail {
+                XvicoLocalizedText(detail).font(.caption).foregroundStyle(XvicoTheme.secondaryText)
+            }
+        }
+    }
+
+    private var remoteConnectionDescription: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            XvicoLocalizedText("快速连接遥控器").font(.system(size: 14, weight: .semibold))
+            XvicoLocalizedText("重新扫描上次使用的 Siri Remote。")
+                .font(.caption).foregroundStyle(XvicoTheme.secondaryText)
+        }
+    }
+    private var remoteConnectionActions: some View {
+        HStack(spacing: 8) {
+            Button { model.reidentifyRemote() } label: {
+                XvicoLocalizedLabel("重新识别遥控器触控板", systemImage: "arrow.triangle.2.circlepath")
+            }.buttonStyle(XvicoToolbarButtonStyle())
+            Button { model.reidentifyRemote(); model.startRemoteVoiceConnection() } label: {
+                XvicoLocalizedLabel("快速连接", systemImage: "arrow.clockwise")
+            }.buttonStyle(XvicoToolbarButtonStyle(prominent: true))
+        }.fixedSize(horizontal: true, vertical: false)
+    }
+
     private var ringModeBinding: Binding<RingAction> {
         Binding(get: { model.effectiveRingAction }, set: { action in
             if let scene = model.activeScene, let index = model.scenes.firstIndex(where: { $0.id == scene.id }) { model.scenes[index].ringAction = action }
             else { model.settings.ringAction = action }
         })
     }
-    private func statusLine(_ label: String, _ status: String) -> some View { HStack { XvicoLocalizedText(label); Spacer(); XvicoLocalizedText(status).font(.caption).foregroundStyle(XvicoTheme.secondaryText).multilineTextAlignment(.trailing) } }
-    private func slider(_ label: String, value: Binding<Double>, range: ClosedRange<Double>, suffix: String) -> some View { HStack { XvicoLocalizedText(label); Slider(value: value, in: range); XvicoLocalizedText(String(format: "%.2f", value.wrappedValue) + suffix).monospacedDigit().frame(width: 55) } }
+    private func statusLine(_ label: String, _ status: String) -> some View {
+        HStack(spacing: 20) {
+            XvicoLocalizedText(label).fontWeight(.medium)
+            Spacer(minLength: 8)
+            XvicoLocalizedText(status).font(.caption).foregroundStyle(XvicoTheme.secondaryText)
+                .multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
+        }.frame(minHeight: 36)
+    }
+    private func slider(_ label: String, value: Binding<Double>, range: ClosedRange<Double>, suffix: String) -> some View {
+        HStack(spacing: 16) {
+            XvicoLocalizedText(label).frame(width: 128, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+            Slider(value: value, in: range).accessibilityLabel(LocalizedStringKey(label))
+            Text(String(format: "%.2f", value.wrappedValue) + suffix)
+                .monospacedDigit().font(.system(size: 12, weight: .medium))
+                .frame(width: 58).padding(.vertical, 5)
+                .background(XvicoTheme.iconTile.opacity(0.6), in: Capsule())
+        }.frame(minHeight: 40)
+    }
     private func openSettings(_ path: String) {
         if let url = URL(string: path) { NSWorkspace.shared.open(url) }
     }
@@ -381,7 +438,7 @@ private struct PermissionTile: View {
                     .foregroundStyle(.blue)
             }.padding(.horizontal, 6).frame(maxWidth: .infinity).frame(height: 112)
                 .contentShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
-        }.buttonStyle(XvicoGlassButtonStyle(cornerRadius: 13))
+        }.buttonStyle(XvicoInsetGlassButtonStyle(cornerRadius: 13))
             .help(LocalizedStringKey(actionTitle))
             .accessibilityLabel(LocalizedStringKey(name))
             .accessibilityValue(LocalizedStringKey(status))
@@ -398,10 +455,37 @@ private struct BackgroundToggleTile: View {
         HStack(spacing: 8) {
             Text(LocalizedStringKey(title)).font(.system(size: 12, weight: .medium)).lineLimit(2)
             Spacer(minLength: 0)
-            Toggle(LocalizedStringKey(help), isOn: $isOn).labelsHidden().toggleStyle(.switch).controlSize(.small)
+            Toggle(LocalizedStringKey(help), isOn: $isOn).labelsHidden().toggleStyle(XvicoSwitchStyle()).controlSize(.small)
         }.padding(.horizontal, 10).frame(maxWidth: .infinity, minHeight: 46)
             .background(XvicoTheme.iconTile.opacity(0.32), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(XvicoTheme.border.opacity(0.6)))
             .help(LocalizedStringKey(help))
+    }
+}
+
+private struct RemoteChannelTile: View {
+    let title: String
+    let symbol: String
+    let status: String
+    let ready: Bool
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: symbol).font(.system(size: 18)).foregroundStyle(.blue)
+                XvicoLocalizedText(title).font(.system(size: 12, weight: .semibold))
+                Spacer(minLength: 4)
+                Image(systemName: ready ? "checkmark.circle.fill" : "circle.dotted")
+                    .foregroundStyle(ready ? Color.green : .secondary)
+                    .accessibilityHidden(true)
+            }
+            XvicoLocalizedText(status).font(.caption).foregroundStyle(XvicoTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: 32, alignment: .topLeading)
+        }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
+            .background(XvicoTheme.iconTile.opacity(0.45), in: RoundedRectangle(cornerRadius: 14))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14).strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.75)
+            }
+            .accessibilityElement(children: .combine)
     }
 }

@@ -308,8 +308,7 @@ private func checkAudioHealth() throws {
                 try? fm.removeItem(at: plist)
             }
             try command("/bin/launchctl", ["bootstrap", "system", plist.path])
-            let deadline = Date().addingTimeInterval(3600)
-            while Date() < deadline && kill(pid, 0) == 0 && !sessionDirectory.exists("stop") {
+            while kill(pid, 0) == 0 && !sessionDirectory.exists("stop") {
                 if sessionDirectory.exists("backend-ended") { break }
                 usleep(200_000)
             }

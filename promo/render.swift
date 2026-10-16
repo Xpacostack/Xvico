@@ -6,7 +6,7 @@ import AVFoundation
 import CoreVideo
 
 struct SceneSpec: Decodable { let id: String; let start: Double; let end: Double; let eyebrow: String; let title: String; let subtitle: String }
-struct RemoteKeyframe: Decodable { let time: Double; let x: Double; let y: Double; let width: Double; let yaw: Double; let registration: String? }
+struct RemoteKeyframe: Decodable { let time: Double; let x: Double; let y: Double; let width: Double; let yaw: Double; let registration: String?; let pitch: Double?; let roll: Double? }
 struct Film: Decodable { let title: String; let width: Int; let height: Int; let fps: Int; let duration: Double; let scenes: [SceneSpec]; let proofTimes: [Double]; let keyTimes: [Double]; let remoteMotion: [RemoteKeyframe] }
 let project = URL(fileURLWithPath: CommandLine.arguments[1]).standardizedFileURL
 let promo = project.appendingPathComponent("promo")
@@ -20,9 +20,11 @@ let previewOnly = args.contains("--preview")
 let scale: CGFloat = args.contains("--draft") ? 0.5 : 1
 let outW = Int(W * scale), outH = Int(H * scale)
 let output = promo.appendingPathComponent(args.contains("--draft") ? ".build/draft-silent.mp4" : ".build/film-silent.mp4")
-let cyan = NSColor(srgbRed: 0.23, green: 0.89, blue: 0.91, alpha: 1)
+let cyan = NSColor(srgbRed: 0.22, green: 0.61, blue: 1, alpha: 1)
+let voiceGreen = NSColor(srgbRed: 0.19, green: 0.82, blue: 0.35, alpha: 1)
+let mint = NSColor(srgbRed: 0.19, green: 0.78, blue: 0.66, alpha: 1)
 let lime = NSColor(srgbRed: 0.65, green: 0.92, blue: 0.35, alpha: 1)
-let ink = NSColor(srgbRed: 0.025, green: 0.045, blue: 0.085, alpha: 1)
+let ink = NSColor(srgbRed: 0.025, green: 0.029, blue: 0.04, alpha: 1)
 let muted = NSColor(srgbRed: 0.59, green: 0.67, blue: 0.75, alpha: 1)
 let white = NSColor(srgbRed: 0.96, green: 0.98, blue: 1, alpha: 1)
 func clamp(_ v: Double, _ a: Double = 0, _ b: Double = 1) -> Double { min(b,max(a,v)) }
@@ -62,14 +64,15 @@ final class RemoteRender {
     let renderer: SCNRenderer
     let turn = SCNNode()
     let asset: SCNNode
-    var cache=[Int:NSImage]()
+    var cache=[String:NSImage]()
+    var cacheOrder=[String]()
     init() throws {
         let scene=try SCNScene(url:project.appendingPathComponent("Sources/XvicoApp/Resources/SiriRemote.usdz"),options:nil)
         guard let model=scene.rootNode.childNodes.first else {fatalError("Empty model")}
         asset=model
         model.removeFromParentNode(); model.eulerAngles=SCNVector3(Float.pi/2,0,0);turn.addChildNode(model);scene.rootNode.addChildNode(turn)
         let camera=SCNNode();camera.camera=SCNCamera();camera.camera!.usesOrthographicProjection=true;camera.camera!.orthographicScale=7.6;camera.camera!.zNear=0.1;camera.camera!.zFar=100;camera.position=SCNVector3(0,0,24);scene.rootNode.addChildNode(camera)
-        for (type,intensity,angles) in [(SCNLight.LightType.ambient,CGFloat(400),SCNVector3(0,0,0)),(.directional,CGFloat(800),SCNVector3(-0.25,-0.4,0))] {let n=SCNNode();n.light=SCNLight();n.light!.type=type;n.light!.intensity=intensity;n.eulerAngles=angles;scene.rootNode.addChildNode(n)}
+        for (type,intensity,angles) in [(SCNLight.LightType.ambient,CGFloat(350),SCNVector3(0,0,0)),(.directional,CGFloat(600),SCNVector3(-0.25,-0.3,0))] {let n=SCNNode();n.light=SCNLight();n.light!.type=type;n.light!.intensity=intensity;n.eulerAngles=angles;scene.rootNode.addChildNode(n)}
         scene.background.contents=NSColor.clear
         renderer=SCNRenderer(device:MTLCreateSystemDefaultDevice(),options:nil);renderer.scene=scene;renderer.pointOfView=camera
     }
@@ -77,22 +80,27 @@ final class RemoteRender {
         let b=asset.boundingBox
         let p=SCNVector3(b.min.x+(b.max.x-b.min.x)*u,side ? 0:b.max.y,b.min.z+(b.max.z-b.min.z)*v)
         let q=renderer.projectPoint(asset.convertPosition(p,to:nil))
-        return CGPoint(x:r.minX+(q.x-(side ? 12:0))/600*r.width,y:r.minY+(840-q.y)/840*r.height)
+        return CGPoint(x:r.minX+q.x/1200*r.width,y:r.minY+(1680-q.y)/1680*r.height)
     }
-    func frame(yaw:Double)->NSImage {
-        let index=Int((yaw*180/Double.pi*8).rounded())
-        // Update geometry even on cached frames so projected button anchors follow the current pose.
-        SCNTransaction.begin();SCNTransaction.animationDuration=0;turn.eulerAngles.y=CGFloat(index)*CGFloat.pi/(180*8);SCNTransaction.commit()
+    func frame(yaw:Double,pitch:Double=0,roll:Double=0)->NSImage {
+        let y=Int((yaw*180/Double.pi*8).rounded())
+        let x=Int((pitch*180/Double.pi*8).rounded())
+        let z=Int((roll*180/Double.pi*8).rounded())
+        let index="\(x):\(y):\(z)"
+        SCNTransaction.begin();SCNTransaction.disableActions=true
+        turn.eulerAngles=SCNVector3(CGFloat(x)*CGFloat.pi/(180*8),CGFloat(y)*CGFloat.pi/(180*8),CGFloat(z)*CGFloat.pi/(180*8))
+        SCNTransaction.commit()
         if let i=cache[index]{return i}
-        let i=renderer.snapshot(atTime:0,with:CGSize(width:600,height:840),antialiasingMode:.multisampling4X)
-        if cache.count<250 {cache[index]=i};return i
+        let i=renderer.snapshot(atTime:0,with:CGSize(width:1200,height:1680),antialiasingMode:.multisampling4X)
+        if cacheOrder.count>=48 {cache.removeValue(forKey:cacheOrder.removeFirst())}
+        cache[index]=i;cacheOrder.append(index);return i
     }
 }
 let remote=try RemoteRender()
 func background(_ ctx:CGContext,_ t:Double){
     ink.setFill();NSRect(x:0,y:0,width:W,height:H).fill()
-    glow(ctx,x:1040+40*sin(t*0.12),y:570,radius:740,color:cyan,alpha:0.055)
-    glow(ctx,x:260,y:900,radius:580,color:NSColor(srgbRed:0.24,green:0.16,blue:0.65,alpha:1),alpha:0.065)
+    glow(ctx,x:1040+40*sin(t*0.12),y:570,radius:740,color:cyan,alpha:0.025)
+    glow(ctx,x:260,y:900,radius:580,color:voiceGreen,alpha:0.018)
     latin("Xpaco",x:76,y:49,width:170,size:20,color:muted,weight:.medium)
     latin("Xvico",x:W-220,y:49,width:144,size:22,color:white,align:.right)
 }
@@ -100,42 +108,42 @@ let promptOne="帮我做一个深色番茄钟网页，有开始、暂停和重�
 let promptTwo="改成青绿色，再加一个任务列表。"
 func mix(_ a:CGFloat,_ b:CGFloat,_ p:Double)->CGFloat {a+(b-a)*CGFloat(clamp(p))}
 func blendRect(_ a:CGRect,_ b:CGRect,_ p:Double)->CGRect {CGRect(x:mix(a.minX,b.minX,p),y:mix(a.minY,b.minY,p),width:mix(a.width,b.width,p),height:mix(a.height,b.height,p))}
-struct RemotePose { let rect: CGRect; let yaw: Double }
+struct RemotePose { let rect: CGRect; let yaw: Double; var pitch: Double = 0; var roll: Double = 0 }
 func motionEase(_ v:Double)->Double {let p=clamp(v);return p*p*p*(p*(p*6-15)+10)}
 let appBody=CGRect(x:110,y:150,width:1220,height:1220*1620/2360)
 let appMain=image("promo/.build/app-plates/app-mapping-main.png")
 let appSiri=image("promo/.build/app-plates/app-siri-mapping.png")
-let appScenes=image("promo/assets/app-scenes.png")
-let appVoice=image("promo/assets/app-voice.png")
+let appScenes=image("promo/.build/app-plates/app-scenes.png")
+let appVoice=image("promo/.build/app-plates/app-voice.png")
 let siriFocus=image("promo/.build/app-plates/siri-focus.png")
+let volumeFocus=image("promo/.build/app-plates/volume-focus.png")
 let presetFocus=image("promo/.build/app-plates/codex-preset-focus.png")
 let voiceFocus=image("promo/.build/app-plates/voice-input-focus.png")
-let modelRestBounds: CGRect = {
-    let rep=NSBitmapImageRep(data:remote.frame(yaw:-0.06).tiffRepresentation!)!
+func alphaBounds(yaw:Double,pitch:Double=0,roll:Double=0)->CGRect {
+    let rep=NSBitmapImageRep(data:remote.frame(yaw:yaw,pitch:pitch,roll:roll).tiffRepresentation!)!
     var minX=rep.pixelsWide,minY=rep.pixelsHigh,maxX=0,maxY=0
     for y in stride(from:0,to:rep.pixelsHigh,by:2) {for x in stride(from:0,to:rep.pixelsWide,by:2) {
         if (rep.colorAt(x:x,y:y)?.alphaComponent ?? 0)>0.15 {minX=min(minX,x);minY=min(minY,y);maxX=max(maxX,x);maxY=max(maxY,y)}
     }}
-    return CGRect(x:minX,y:minY,width:maxX-minX+2,height:maxY-minY+2)
-}()
+    return CGRect(x:CGFloat(minX)/2,y:CGFloat(minY)/2,width:CGFloat(maxX-minX+2)/2,height:CGFloat(maxY-minY+2)/2)
+}
+let modelRestBounds=alphaBounds(yaw:-0.06)
+let modelSiriBounds=alphaBounds(yaw:-0.58,pitch:-0.06,roll:-0.10)
 func mappedAppRect(_ raw:CGRect,_ body:CGRect=appBody)->CGRect {
-    CGRect(x:body.minX+raw.minX/2360*body.width,y:body.minY+raw.minY/1620*body.height,width:raw.width/2360*body.width,height:raw.height/1620*body.height)
+    CGRect(x:body.minX+raw.minX/1180*body.width,y:body.minY+raw.minY/810*body.height,width:raw.width/1180*body.width,height:raw.height/810*body.height)
 }
 func registeredModelPose(_ name:String)->RemotePose {
-    let raw=name=="main" ? CGRect(x:1215,y:273,width:270,height:1022):CGRect(x:1575,y:245,width:286,height:1076)
+    let raw=name=="main" ? CGRect(x:607,y:110,width:135,height:510):CGRect(x:750,y:101,width:214,height:560)
+    let bounds=name=="main" ? modelRestBounds:modelSiriBounds
     let target=mappedAppRect(raw)
-    let height=target.height/(modelRestBounds.height/840)
+    let height=target.height/(bounds.height/840)
     let width=height/1.4
-    let r=CGRect(x:target.minX-modelRestBounds.minX/600*width,y:target.minY-modelRestBounds.minY/840*height,width:width,height:height)
-    return RemotePose(rect:r,yaw:-0.06)
+    let r=CGRect(x:target.minX-bounds.minX/600*width,y:target.minY-bounds.minY/840*height,width:width,height:height)
+    return RemotePose(rect:r,yaw:name=="main" ? -0.06:-0.58,pitch:name=="main" ? 0:-0.06,roll:name=="main" ? 0:-0.10)
 }
 func nativeWindow(_ screenshot:NSImage,_ r:CGRect,_ ctx:CGContext,label:String="Xvico") {
     panelImage(screenshot,r,ctx:ctx,radius:17)
-    let chrome=CGRect(x:r.minX,y:r.minY-30,width:r.width,height:32)
-    rect(chrome,radius:13,fill:NSColor(srgbRed:0.94,green:0.96,blue:0.98,alpha:1))
-    rect(CGRect(x:r.minX,y:r.minY-12,width:r.width,height:15),radius:0,fill:NSColor(srgbRed:0.94,green:0.96,blue:0.98,alpha:1))
-    for (i,c) in [NSColor.systemRed,NSColor.systemYellow,NSColor.systemGreen].enumerated(){rect(CGRect(x:r.minX+16+CGFloat(i)*17,y:r.minY-21,width:9,height:9),radius:4.5,fill:c.withAlphaComponent(0.8))}
-    latin(label,x:r.minX+90,y:r.minY-25,width:r.width-180,size:16,color:NSColor(srgbRed:0.23,green:0.28,blue:0.34,alpha:1),weight:.medium,align:.center)
+
 }
 func pointer(_ p:CGPoint,_ ctx:CGContext,click:Double=0){
     if click>0 && click<1 {let radius=CGFloat(10+click*30);let ring=NSBezierPath(ovalIn:CGRect(x:p.x-radius,y:p.y-radius,width:radius*2,height:radius*2));cyan.withAlphaComponent(CGFloat(1-click)).setStroke();ring.lineWidth=2;ring.stroke()}
@@ -154,28 +162,36 @@ func applicationOpening(_ t:Double,_ ctx:CGContext){
 }
 func detachedSiriCard(_ t:Double,_ ctx:CGContext){
     guard t>=7.75 && t<14 else{return}
-    let source=mappedAppRect(CGRect(x:563,y:169,width:691,height:706))
-    let target=CGRect(x:178,y:330,width:510,height:510*706/691)
+    let source=mappedAppRect(CGRect(x:281,y:45,width:347,height:384))
+    let target=CGRect(x:160,y:320,width:465,height:465*384/347)
     let r=blendRect(source,target,motionEase((t-7.75)/2.45))
     let a=smooth((t-7.75)/0.7)*(1-smooth((t-13.6)/0.4))
-    opacity(ctx,a){panelImage(siriFocus,r,ctx:ctx,radius:25)}
+    let change=smooth((t-12.2)/0.48)
+    opacity(ctx,a*(1-change)){panelImage(siriFocus,r,ctx:ctx,radius:25)}
+    let volumeRect=CGRect(x:r.minX,y:r.minY-20*CGFloat(change),width:r.width,height:r.width*441/347)
+    opacity(ctx,a*change){panelImage(volumeFocus,volumeRect,ctx:ctx,radius:25)}
+    if t>10.15 && t<11.35 {
+        let target=CGPoint(x:r.minX+r.width*0.74,y:r.minY+r.height*0.35)
+        let q=motionEase((t-10.15)/0.55)
+        pointer(CGPoint(x:mix(660,target.x,q),y:mix(760,target.y,q)),ctx,click:(t-10.7)/0.4)
+    }
 }
 func presetApplication(_ t:Double,_ ctx:CGContext){
     let r=CGRect(x:550,y:300,width:810,height:810*1620/2360)
     let a=smooth((t-14.65)/0.7)*(1-smooth((t-16.7)/1.1))
     opacity(ctx,a){nativeWindow(appScenes,r,ctx,label:"Xvico · 预设场景")}
-    let from=mappedAppRect(CGRect(x:1684,y:728,width:634,height:167),r)
-    let focusRect=blendRect(from,CGRect(x:720,y:470,width:600,height:600*167/634),motionEase((t-16.7)/1.3))
+    let from=mappedAppRect(CGRect(x:837,y:452,width:299,height:129),r)
+    let focusRect=blendRect(from,CGRect(x:730,y:420,width:565,height:565*129/299),motionEase((t-16.7)/1.3))
     opacity(ctx,smooth((t-16.7)/0.65)){panelImage(presetFocus,focusRect,ctx:ctx,radius:23);rect(focusRect,radius:23,fill:cyan.withAlphaComponent(0.015),stroke:cyan.withAlphaComponent(0.4),line:1.5)}
 }
 func voiceApplication(_ t:Double,_ ctx:CGContext){
     let r=CGRect(x:560,y:310,width:800,height:800*1620/2360)
     opacity(ctx,smooth((t-24.1)/0.35)*(1-smooth((t-24.7)/0.7))){nativeWindow(appVoice,r,ctx,label:"Xvico · 语音设置")}
-    let from=mappedAppRect(CGRect(x:631,y:150,width:1440,height:340),r)
-    let focusRect=blendRect(from,CGRect(x:710,y:350,width:650,height:650*340/1440),motionEase((t-24.7)/0.8))
+    let from=mappedAppRect(CGRect(x:331,y:204,width:688,height:248),r)
+    let focusRect=blendRect(from,CGRect(x:710,y:350,width:650,height:650*248/688),motionEase((t-24.7)/0.8))
     opacity(ctx,smooth((t-24.7)/0.5)*(1-smooth((t-25.35)/0.4))){
         panelImage(voiceFocus,focusRect,ctx:ctx,radius:22)
-        if t>24.9 {let selected=CGRect(x:focusRect.minX+843/1440*focusRect.width,y:focusRect.minY+105/340*focusRect.height,width:555/1440*focusRect.width,height:90/340*focusRect.height);rect(selected,radius:14,fill:cyan.withAlphaComponent(0.035),stroke:cyan.withAlphaComponent(0.7),line:2)}
+        if t>24.9 {let selected=CGRect(x:focusRect.minX+406/688*focusRect.width,y:focusRect.minY+6/248*focusRect.height,width:276/688*focusRect.width,height:48/248*focusRect.height);rect(selected,radius:14,fill:cyan.withAlphaComponent(0.035),stroke:cyan.withAlphaComponent(0.7),line:2)}
     }
 }
 func remotePose(_ t:Double)->RemotePose {
@@ -183,9 +199,9 @@ func remotePose(_ t:Double)->RemotePose {
     let index=keys.lastIndex(where:{$0.time<=t}) ?? 0
     let a=keys[index], b=keys[min(index+1,keys.count-1)]
     let p=b.time>a.time ? motionEase((t-a.time)/(b.time-a.time)):0
-    func pose(_ k:RemoteKeyframe)->RemotePose {if let registration=k.registration {return registeredModelPose(registration)};return RemotePose(rect:CGRect(x:k.x,y:k.y,width:k.width,height:k.width*1.4),yaw:k.yaw)}
+    func pose(_ k:RemoteKeyframe)->RemotePose {if let registration=k.registration {return registeredModelPose(registration)};return RemotePose(rect:CGRect(x:k.x,y:k.y,width:k.width,height:k.width*1.4),yaw:k.yaw,pitch:k.pitch ?? 0,roll:k.roll ?? 0)}
     let start=pose(a), end=pose(b)
-    return RemotePose(rect:blendRect(start.rect,end.rect,p),yaw:start.yaw+(end.yaw-start.yaw)*p)
+    return RemotePose(rect:blendRect(start.rect,end.rect,p),yaw:start.yaw+(end.yaw-start.yaw)*p,pitch:start.pitch+(end.pitch-start.pitch)*p,roll:start.roll+(end.roll-start.roll)*p)
 }
 func activeRemoteKey(_ t:Double)->String? {
     if t>5.35 && t<7.8 || t>10.7 && t<13.6 || t>24.9 && t<31.4 || t>35.1 && t<37.3 {return "voice"}
@@ -202,30 +218,35 @@ func ringEffect(_ t:Double,_ r:CGRect){
 func typed(_ s:String,_ p:Double)->String {String(s.prefix(Int(Double(s.count)*clamp(p))))}
 func opacity(_ ctx:CGContext,_ alpha:Double,_ body:()->Void){guard alpha>0 else{return};ctx.saveGState();ctx.setAlpha(CGFloat(clamp(alpha)));ctx.beginTransparencyLayer(auxiliaryInfo:nil);ctx.setAlpha(1);body();ctx.endTransparencyLayer();ctx.restoreGState()}
 func wave(_ t:Double,_ r:CGRect,_ alpha:Double=1){
-    for i in 0..<45 {let p=Double(i)/44;let h=CGFloat(6+(Double(r.height)-6)*pow(sin(p*Double.pi),1.4)*abs(sin(Double(i)*0.62+t*7)));rect(CGRect(x:r.minX+CGFloat(p)*r.width,y:r.midY-h/2,width:4,height:h),radius:2,fill:cyan.withAlphaComponent(CGFloat(alpha)*(0.45+0.5*CGFloat(sin(p*Double.pi)))))}
+    for i in 0..<45 {let p=Double(i)/44;let h=CGFloat(6+(Double(r.height)-6)*pow(sin(p*Double.pi),1.4)*abs(sin(Double(i)*0.62+t*7)));rect(CGRect(x:r.minX+CGFloat(p)*r.width,y:r.midY-h/2,width:4,height:h),radius:2,fill:voiceGreen.withAlphaComponent(CGFloat(alpha)*(0.45+0.5*CGFloat(sin(p*Double.pi)))))}
 }
 func title(_ s:String,_ sub:String="",alpha:Double=1){let ctx=NSGraphicsContext.current!.cgContext;opacity(ctx,alpha){text(s,x:80,y:114,width:1280,size:61,align:.center);if !sub.isEmpty{text(sub,x:80,y:211,width:1280,size:24,color:muted,align:.center)}}}
 func pulse(_ p:CGPoint,_ t:Double,_ ctx:CGContext,scale:CGFloat=1){let q=t.truncatingRemainder(dividingBy:1.2)/1.2;glow(ctx,x:p.x,y:p.y,radius:66*scale,color:cyan,alpha:0.22);let ring=NSBezierPath(ovalIn:CGRect(x:p.x-CGFloat(12+q*26)*scale,y:p.y-CGFloat(12+q*26)*scale,width:CGFloat(24+q*52)*scale,height:CGFloat(24+q*52)*scale));cyan.withAlphaComponent(CGFloat(1-q)*0.7).setStroke();ring.lineWidth=2;ring.stroke()}
-func remoteView(_ r:CGRect,_ yaw:Double,_ ctx:CGContext,active:String?=nil,time:Double=0)->CGPoint{
-    let img=remote.frame(yaw:yaw)
+func remoteView(_ pose:RemotePose,_ ctx:CGContext,active:String?=nil,time:Double=0)->CGPoint{
+    let r=pose.rect
+    let img=remote.frame(yaw:pose.yaw,pitch:pose.pitch,roll:pose.roll)
     ctx.saveGState();ctx.setShadow(offset:CGSize(width:6,height:-12),blur:24,color:NSColor.black.withAlphaComponent(0.17).cgColor);drawImage(img,r);ctx.restoreGState()
-    let siri=remote.anchor(u:1,v:0.22,side:true,in:r)
-    if let active {
-        let p=active=="voice" ? siri:remote.anchor(u:active=="mute" ? 0.285:0.50,v:active=="mute" ? 0.596:0.21,in:r)
-        pulse(p,time,ctx,scale:r.height/800)
-        if active=="voice" {let a=remote.anchor(u:1,v:0.16,side:true,in:r),b=remote.anchor(u:1,v:0.28,side:true,in:r);line(a,b,color:cyan,width:5)}
-    }
-    return siri
+    // The product's new focus pose identifies the key. No outline / hot-zone
+    // graphics are painted over its actual Siri or face buttons.
+    return remote.anchor(u:1,v:0.22,side:true,in:r)
 }
 func wire(_ a:CGPoint,_ b:CGPoint,_ t:Double,_ ctx:CGContext,alpha:Double=1){
     opacity(ctx,alpha){let p=NSBezierPath();p.move(to:a);p.curve(to:b,controlPoint1:CGPoint(x:a.x+160,y:a.y),controlPoint2:CGPoint(x:b.x-160,y:b.y));cyan.withAlphaComponent(0.17).setStroke();p.lineWidth=1.5;p.stroke();for i in 0..<18 {let q=(t*0.28+Double(i)/18).truncatingRemainder(dividingBy:1);let x=pow(1-q,3)*a.x+3*pow(1-q,2)*q*(a.x+160)+3*(1-q)*q*q*(b.x-160)+q*q*q*b.x;let y=pow(1-q,3)*a.y+3*pow(1-q,2)*q*a.y+3*(1-q)*q*q*b.y+q*q*q*b.y;rect(CGRect(x:x,y:y-2,width:5,height:4),radius:2,fill:cyan.withAlphaComponent(CGFloat(sin(q*Double.pi))*0.8))}}
 }
-func flatCard(_ r:CGRect,_ ctx:CGContext){ctx.saveGState();ctx.setShadow(offset:CGSize(width:0,height:18),blur:50,color:NSColor.black.withAlphaComponent(0.35).cgColor);rect(r,radius:27,fill:NSColor(srgbRed:0.065,green:0.085,blue:0.11,alpha:1),stroke:white.withAlphaComponent(0.13));ctx.restoreGState()}
+func flatCard(_ r:CGRect,_ ctx:CGContext){
+    let shape=NSBezierPath(roundedRect:r,xRadius:27,yRadius:27)
+    ctx.saveGState();ctx.setShadow(offset:CGSize(width:0,height:16),blur:42,color:NSColor.black.withAlphaComponent(0.26).cgColor)
+    NSColor(srgbRed:0.10,green:0.11,blue:0.13,alpha:0.88).setFill();shape.fill();ctx.restoreGState()
+    ctx.saveGState();shape.addClip()
+    NSGradient(colors:[white.withAlphaComponent(0.07),white.withAlphaComponent(0.015),NSColor.black.withAlphaComponent(0.06)])!.draw(in:shape,angle:90)
+    ctx.restoreGState();white.withAlphaComponent(0.18).setStroke();shape.lineWidth=1;shape.stroke()
+}
 func settingRow(_ label:String,_ value:String,_ y:CGFloat,_ selected:Bool,_ x:CGFloat=785,_ w:CGFloat=440){rect(CGRect(x:x,y:y,width:w,height:72),radius:17,fill:selected ? cyan.withAlphaComponent(0.10):white.withAlphaComponent(0.025),stroke:selected ? cyan.withAlphaComponent(0.45):.clear);text(label,x:x+22,y:y+22,width:125,size:23,color:muted);text(value,x:x+143,y:y+22,width:w-165,size:23,color:selected ? cyan:white,align:.right)}
 func brandCodex(_ t:Double,_ ctx:CGContext){
     let morph=smooth((t-26.2)/1.1)
     let r=blendRect(CGRect(x:230,y:600,width:980,height:180),CGRect(x:200,y:360,width:1115,height:620),morph)
     flatCard(r,ctx)
+    opacity(ctx,1-morph){latin("Codex",x:r.minX+30,y:r.minY-82,width:250,size:24,color:muted,weight:.medium)}
     opacity(ctx,morph){latin("Codex",x:r.minX+30,y:r.minY+24,width:210,size:28);latin("focus-timer",x:r.maxX-240,y:r.minY+32,width:205,size:17,color:muted,align:.right);line(CGPoint(x:r.minX+28,y:r.minY+79),CGPoint(x:r.maxX-28,y:r.minY+79),color:white.withAlphaComponent(0.07))}
     let sent=smooth((t-26.5)/0.9)
     let input=CGRect(x:r.minX+30,y:r.maxY-172,width:r.width-60,height:142)
@@ -236,7 +257,7 @@ func brandCodex(_ t:Double,_ ctx:CGContext){
     if t>=27.4 {opacity(ctx,smooth((t-27.4)/0.5)){latin("Codex",x:r.minX+38,y:r.minY+270,width:180,size:23,color:cyan);text("正在构建你的第一个页面…",x:r.minX+38,y:r.minY+318,width:r.width-80,size:29,color:muted);for (i,code) in ["+ <Timer duration={25 * 60} />","+ <Controls start pause reset />"].enumerated() {let a=smooth((t-27.6-Double(i)*0.25)/0.4);opacity(ctx,a){latin(code,x:r.minX+38,y:r.minY+382+CGFloat(i)*42,width:r.width-76,size:25,color:cyan)}}}}
 }
 func productPage(_ r:CGRect,_ revised:Double,_ ctx:CGContext){
-    flatCard(r,ctx);let purple=NSColor(srgbRed:0.62,green:0.51,blue:0.97,alpha:1);let accent=purple.blended(withFraction:CGFloat(revised),of:cyan)!
+    flatCard(r,ctx);let purple=NSColor(srgbRed:0.62,green:0.51,blue:0.97,alpha:1);let accent=purple.blended(withFraction:CGFloat(revised),of:mint)!
     latin("FOCUS",x:r.minX+30,y:r.minY+32,width:r.width-60,size:18,color:accent,align:.center)
     let radius=min(r.width*0.25,110);let center=CGPoint(x:r.midX,y:r.minY+215);let p=NSBezierPath(ovalIn:CGRect(x:center.x-radius,y:center.y-radius,width:radius*2,height:radius*2));accent.withAlphaComponent(0.3).setStroke();p.lineWidth=4;p.stroke()
     latin("25:00",x:r.minX+30,y:center.y-40,width:r.width-60,size:65,color:white,weight:.light,align:.center)
@@ -298,7 +319,7 @@ func render(_ t:Double,_ buffer:CVPixelBuffer){
     let current=film.scenes.lastIndex(where:{$0.start<=t}) ?? 0
     // One persistent product layer: scene content never creates or removes the remote.
     let pose=remotePose(t)
-    _=remote.frame(yaw:pose.yaw)
+    _=remote.frame(yaw:pose.yaw,pitch:pose.pitch,roll:pose.roll)
     let scene=film.scenes[current]
     let enter=scene.start==0 ? 1:smooth((t-scene.start-0.08)/0.60)
     let leave=scene.id=="outro" ? 1:1-smooth((t-(scene.end-0.4))/0.4)
@@ -307,7 +328,7 @@ func render(_ t:Double,_ buffer:CVPixelBuffer){
     let outroStart=film.scenes.last!.start
     if t<outroStart+0.85 {
         opacity(ctx,1-smooth((t-(outroStart+0.05))/0.8)){
-            _=remoteView(pose.rect,pose.yaw,ctx,active:activeRemoteKey(t),time:t)
+            _=remoteView(pose,ctx,active:activeRemoteKey(t),time:t)
             ringEffect(t,pose.rect)
         }
     }
@@ -325,7 +346,7 @@ if args.contains("--verify-motion") {
         let pose=remotePose(Double(f)/Double(film.fps))
         maxStep=max(maxStep,hypot(Double(pose.rect.midX-previous.rect.midX),Double(pose.rect.midY-previous.rect.midY)))
         maxScale=max(maxScale,abs(Double(pose.rect.width-previous.rect.width)))
-        maxYaw=max(maxYaw,abs(pose.yaw-previous.yaw))
+        maxYaw=max(maxYaw,max(abs(pose.yaw-previous.yaw),max(abs(pose.pitch-previous.pitch),abs(pose.roll-previous.roll))))
         precondition(pose.rect.width>0 && pose.rect.intersects(CGRect(x:0,y:0,width:W,height:H)))
         previous=pose
     }

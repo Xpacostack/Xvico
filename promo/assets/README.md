@@ -1,7 +1,7 @@
-# Xvico 真实应用界面素材
+# Xvico latest UI captures
 
-2026-10-14 直接从本机 `dist/Xvico.app` 采集：主界面、点击模型 Siri 侧键后展开的映射框、预设场景页、语音设置页。
+Captured directly from the local dist/Xvico.app on 2026-10-16 at 1180x810 window points: mapping main, Siri focus, volume-up focus, presets, voice and device settings. This revision includes the raised glass sidebar, removed top header, pose-based key focus and high-resolution model without visible selection outlines.
 
-仅切换页面和打开/关闭映射框；没有改按键、场景、输入法或麦克风配置，没有启动采集。采集后恢复功能映射主页面。
+Only page navigation and model selection were used. No mapping, scene, input-method or microphone configuration was changed, and no audio capture was started. Returned to the mapping page afterward. Raw screenshots stay intact and are hashed in captures.json.
 
-`prepare-app-assets.py` 保留原截图，生成动画用背景底板及真实控件特写。底板仅将截图中原有的遥控器及阴影区域替换为相邻背景插值，让同一个 USDZ 模型在应用里出现并连续放大移出，避免出现两个模型。导航、设置、文字均来自实际截图。所有操作光标及镜头变化为视频编排。
+prepare-app-assets.py creates derived animation plates, removes only the baked-in model/shadow, the OS sharing indicator and deliberately parked capture cursor, and extracts actual setting cards. It does not fabricate product controls or configuration states. One high-resolution USDZ layer is registered to these plates and moves continuously into the subsequent feature demonstrations. Cursor gestures, voice waveforms, typed text and Codex interaction are scripted promotional demonstrations.

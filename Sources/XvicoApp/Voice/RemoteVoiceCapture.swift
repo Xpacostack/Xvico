@@ -128,7 +128,7 @@ final class RemoteVoiceCapture: RemoteVoiceCapturing {
                     guard self.runReader(readerURL, trace: path, token: token, onFrame: onFrame, onError: onError) else { return }
                     onReady()
                     guard self.generation == token else { return }
-                    onStatus("等待 Siri Remote 音频；临时采集最多持续一小时")
+                    onStatus("等待 Siri Remote 音频；停止或退出应用时结束采集")
                 }
             }
         }

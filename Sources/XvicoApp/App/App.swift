@@ -40,6 +40,7 @@ struct XvicoApp: App {
 }
 
 struct XvicoWindow: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var model: AppModel
     @AppStorage("xvibe.sidebarVisible") private var sidebarVisible = true
     @AppStorage("xvibe.appearance") private var appearance = XvicoAppearance.system.rawValue
@@ -47,52 +48,41 @@ struct XvicoWindow: View {
     var body: some View {
         HStack(spacing: 0) {
             SidebarView()
+                .environment(\.xvicoImmersiveGlass, true)
                 .frame(width: sidebarVisible ? XvicoLayout.sidebarWidth : 0, alignment: .leading)
                 .clipped()
                 .opacity(sidebarVisible ? 1 : 0)
                 .allowsHitTesting(sidebarVisible)
+                // Hidden sidebar views stay alive during the slide. Disable
+                // their surfaces too, so hover state cannot survive hiding.
+                .disabled(!sidebarVisible)
                 .accessibilityHidden(!sidebarVisible)
-            VStack(spacing: 0) {
-                HStack(spacing: 14) {
-                    Text(LocalizedStringKey(model.page.displayName)).font(.system(size: 14, weight: .semibold))
-                    Spacer()
-                    Circle().fill(model.running && model.remoteConnected ? .green : .gray).frame(width: 7, height: 7)
+            Group {
+                switch model.page {
+                case .mapping: MappingView()
+                case .scenes: ScenesView()
+                case .commands: CommandsView()
+                case .device: DeviceView()
+                case .voice: VoiceView()
                 }
-                .padding(.leading, sidebarVisible ? 18 : 152).padding(.trailing, 18).frame(height: 52)
-                .xvicoGlassPanel(cornerRadius: 0, bordered: false)
-                Rectangle().fill(Color.primary.opacity(0.09)).frame(height: 1)
-                Group {
-                    switch model.page {
-                    case .mapping: MappingView()
-                    case .scenes: ScenesView()
-                    case .commands: CommandsView()
-                    case .device: DeviceView()
-                    case .voice: VoiceView()
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(XvicoWindowBackdrop())
         .overlay(alignment: .topLeading) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.30)) { sidebarVisible.toggle() }
-            } label: {
-                Image(systemName: "sidebar.left").font(.system(size: 16, weight: .medium))
-                    .frame(width: 36, height: 36).xvicoGlassPanel(cornerRadius: 18, interactive: true)
-                    .frame(width: 48, height: 48)
-                    .contentShape(Rectangle())
+            SidebarToggleButton(expanded: sidebarVisible) {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.36)) { sidebarVisible.toggle() }
             }
-            .buttonStyle(.plain)
-            .help(LocalizedStringKey(sidebarVisible ? "隐藏边栏" : "显示边栏"))
-            .accessibilityLabel(LocalizedStringKey(sidebarVisible ? "隐藏边栏" : "显示边栏"))
-            .position(x: sidebarVisible ? XvicoLayout.sidebarWidth - 26 : 114, y: 26)
-            .frame(height: 52)
+            .position(x: sidebarVisible ? XvicoLayout.sidebarWidth - 26 : 43, y: sidebarVisible ? 26 : 49)
+            // Fixed overlay coordinates keep the same button alive throughout
+            // the move; changing the container height changed its layout origin.
+            .frame(height: 100)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.36), value: sidebarVisible)
         }
         .overlay(alignment: .bottom) {
             if let toast = model.toast {
                 XvicoLocalizedText(toast).font(.system(size: 12, weight: .medium)).padding(.horizontal, 15).padding(.vertical, 9)
-                    .xvicoGlassPanel(cornerRadius: 40).padding(.bottom, 18)
+                    .xvicoGlassPanel(cornerRadius: 40, floating: true).environment(\.xvicoImmersiveGlass, true).padding(.bottom, 18)
             }
         }
         .ignoresSafeArea(.container, edges: .top)
@@ -110,37 +100,63 @@ struct XvicoWindow: View {
     }
 }
 
+private struct SidebarToggleButton: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hovered = false
+    let expanded: Bool
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "sidebar.left").font(.system(size: 16, weight: .medium))
+                .frame(width: 40, height: 40)
+        }.buttonStyle(XvicoRaisedGlassButtonStyle(cornerRadius: 20, hitPadding: 4))
+            .opacity(expanded || hovered || reduceTransparency ? 1 : 0.45)
+            .onHover { hovered = $0 }
+            .onChange(of: expanded) { _ in hovered = false }
+            .onDisappear { hovered = false }
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: hovered)
+            .help(LocalizedStringKey(expanded ? "隐藏边栏" : "显示边栏"))
+            .accessibilityLabel(LocalizedStringKey(expanded ? "隐藏边栏" : "显示边栏"))
+    }
+}
+
 struct SidebarView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.locale) private var locale
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 9).fill(Color.blue.opacity(0.09)).frame(width: 32, height: 38)
-                    Image(systemName: "appletvremote.gen3.fill").font(.system(size: 21)).foregroundStyle(.blue)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "appletvremote.gen3")
+                        .font(.system(size: 21, weight: .medium)).foregroundStyle(.blue)
+                        .frame(width: 24, height: 28)
+                    Text("Siri Remote").font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                    Spacer(minLength: 0)
                 }
-                VStack(alignment: .leading, spacing: 3) {
-                    XvicoLocalizedText("Siri Remote").font(.system(size: 12, weight: .semibold)).lineLimit(1)
-                    HStack(spacing: 5) {
-                        ZStack {
-                            Circle().stroke((model.running && model.remoteConnected ? Color.green : Color.gray).opacity(0.5), lineWidth: 2)
-                            Circle().fill(model.running && model.remoteConnected ? .green : .gray).padding(3)
-                        }.frame(width: 13, height: 13)
-                        Text(LocalizedStringKey(model.remoteConnected ? "已连接" : model.remoteConnectionLabel))
-                            .font(.system(size: 11, weight: .medium)).foregroundStyle(XvicoTheme.secondaryText).lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }.help(XvicoLocalization.string(model.remoteStatus, locale: locale))
-                    if model.remoteConnected {
-                        Text(LocalizedStringKey(model.controlStatusLabel)).font(XvicoTypography.caption).foregroundStyle(XvicoTheme.secondaryText).lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                let connectionTitle = model.remoteConnected ? "已连接" : model.remoteConnectionLabel
+                let connection = HStack(spacing: 5) {
+                    Circle().fill(model.remoteConnected ? Color.green : .gray).frame(width: 6, height: 6)
+                    XvicoLocalizedText(connectionTitle)
+                        .font(.system(size: 10, weight: .medium))
                 }
-                Spacer(minLength: 0)
+                let control = XvicoLocalizedText(model.controlStatusLabel)
+                    .font(.system(size: 9)).foregroundStyle(XvicoTheme.secondaryText)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 5) { connection; Spacer(minLength: 2); if model.running { control } }
+                        .fixedSize(horizontal: true, vertical: false)
+                    VStack(alignment: .leading, spacing: 5) { connection; if model.running { control } }
+                }
             }
-            .padding(.horizontal, 10).frame(minHeight: 78).padding(.vertical, 6)
-            .xvicoGlassPanel(cornerRadius: 16)
+            .padding(12).frame(maxWidth: .infinity, minHeight: 74, alignment: .leading)
+            .xvicoRaisedGlassPanel(cornerRadius: 18)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Siri Remote")
+            .accessibilityValue(Text((model.running ? [model.remoteConnected ? "已连接" : model.remoteConnectionLabel, model.controlStatusLabel]
+                                     : [model.remoteConnectionLabel])
+                .map { XvicoLocalization.string($0, locale: locale) }.joined(separator: ", ")))
+            .help(XvicoLocalization.string(model.remoteStatus, locale: locale))
             .padding(.horizontal, 12).padding(.top, 58).padding(.bottom, 18)
 
             VStack(spacing: 10) {
@@ -157,14 +173,9 @@ struct SidebarView: View {
                         .padding(.horizontal, 10).frame(maxWidth: .infinity).frame(height: 52)
                         .foregroundStyle(XvicoTheme.optionForeground(selected: model.page == page, scheme: colorScheme))
                         .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    }.buttonStyle(XvicoGlassButtonStyle(selected: model.page == page))
-                        .overlay(alignment: .leading) {
-                            if model.page == page && colorScheme == .dark {
-                                Capsule().fill(XvicoTheme.selectionOutline(colorScheme)).frame(width: 3, height: 18)
-                                    .padding(.leading, 8).allowsHitTesting(false)
-                            }
-                        }
+                    }.buttonStyle(XvicoGlassButtonStyle(selected: model.page == page, raised: true))
                         .accessibilityLabel(LocalizedStringKey(page.displayName))
+                        .accessibilityAddTraits(model.page == page ? .isSelected : [])
                 }
             }.padding(.horizontal, 12)
 
@@ -176,147 +187,12 @@ struct SidebarView: View {
                     Text(LocalizedStringKey(model.running ? "停止控制" : "开始控制")).foregroundStyle(.primary)
                 }.font(.system(size: 12, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 42)
                     .contentShape(Capsule())
-            }.buttonStyle(XvicoGlassButtonStyle(tint: (model.running ? Color.red : Color.accentColor).opacity(0.12), cornerRadius: 24))
+            }.buttonStyle(XvicoGlassButtonStyle(tint: (model.running ? Color.red : Color.accentColor).opacity(0.12), cornerRadius: 24, raised: true))
                 .padding(.horizontal, 12).padding(.bottom, 12)
         }
         .frame(width: XvicoLayout.sidebarWidth)
-        .background(XvicoTheme.sidebarSurface(colorScheme))
+        .xvicoGlassPanel(cornerRadius: 0, bordered: false, floating: true)
         .overlay(alignment: .trailing) { Rectangle().fill(XvicoTheme.border).frame(width: 1) }
-    }
-}
-
-struct ScenesView: View {
-    @EnvironmentObject private var model: AppModel
-    @Environment(\.locale) private var locale
-    @State private var showingAdd = false
-    @State private var editingScene: XvicoScene?
-
-    @State private var selectedPreset: ScenePreset?
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(spacing: 18) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            XvicoLocalizedText("根据前台 App 自动切换映射").font(.system(size: 14, weight: .semibold))
-                            XvicoLocalizedText("某个 App 在最前面时，自动套用它的映射规则。").font(.system(size: 11)).foregroundStyle(XvicoTheme.secondaryText)
-                        }
-                        Toggle("自动切换", isOn: $model.settings.autoSwitchScenes).labelsHidden().toggleStyle(.switch)
-                        Spacer()
-                        HStack(spacing: 8) {
-                            Button { model.restoreInitialRemoteMapping() } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "arrow.counterclockwise.circle.fill").font(.system(size: 22))
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        XvicoLocalizedText("恢复初始键位").font(.system(size: 12, weight: .semibold))
-                                        XvicoLocalizedText("恢复音量、静音与默认按键，暂停已有场景").font(.system(size: 10)).lineLimit(2)
-                                    }
-                                }.padding(.horizontal, 12).frame(maxWidth: .infinity, minHeight: 64, maxHeight: 64, alignment: .leading)
-                                    .contentShape(RoundedRectangle(cornerRadius: 12))
-                            }.buttonStyle(.plain).foregroundStyle(.blue)
-                                .xvicoGlassPanel(cornerRadius: 12, interactive: true)
-                                .accessibilityIdentifier("restoreInitialRemoteMapping")
-                            Button { model.undoInitialRemoteMappingRestore() } label: {
-                                VStack(spacing: 5) {
-                                    Image(systemName: "arrow.uturn.backward").font(.system(size: 17, weight: .medium))
-                                    XvicoLocalizedText("撤销").font(.system(size: 10, weight: .semibold))
-                                }.frame(width: 64, height: 64).contentShape(RoundedRectangle(cornerRadius: 12))
-                            }.buttonStyle(.plain).foregroundStyle(.blue)
-                                .xvicoGlassPanel(cornerRadius: 12, interactive: true)
-                                .help("撤销上次恢复")
-                                .accessibilityLabel(Text(LocalizedStringKey("撤销上次恢复")))
-                                .accessibilityIdentifier("undoInitialRemoteMappingRestore")
-                                // Preserve both dimensions while unavailable so
-                                // the header and content never move after reset.
-                                .opacity(model.canUndoMappingRestore ? 1 : 0)
-                                .disabled(!model.canUndoMappingRestore)
-                                .allowsHitTesting(model.canUndoMappingRestore)
-                                .accessibilityHidden(!model.canUndoMappingRestore)
-                        }.frame(width: 332, height: 64)
-                    }
-                    Divider()
-                    HStack {
-                        XvicoLocalizedLabel("当前前台：", systemImage: "macwindow").foregroundStyle(XvicoTheme.secondaryText)
-                        Text(model.currentApp).fontWeight(.semibold)
-                        Spacer()
-                        XvicoLocalizedText(model.activeScene?.name ?? "默认映射").foregroundStyle(XvicoTheme.secondaryText)
-                    }.font(.system(size: 12))
-                }
-                .padding(16).xvicoGlassPanel(cornerRadius: 16)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack { XvicoLocalizedText("预设库").font(.system(size: 15, weight: .semibold)); Spacer(); Button { model.importPreset() } label: { XvicoLocalizedLabel("导入预设", systemImage: "square.and.arrow.down").font(.system(size: 11, weight: .semibold)) }.buttonStyle(.borderedProminent) }
-                    XvicoLocalizedText("选择一套常用映射并绑定到本机 App，也可以导入或导出场景预设。").font(.system(size: 11)).foregroundStyle(XvicoTheme.secondaryText)
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                        ForEach(ScenePreset.all) { preset in
-                            Button {
-                                selectedPreset = preset
-                            } label: {
-                                HStack(alignment: .top, spacing: 10) {
-                                    Image(systemName: preset.symbol).font(.system(size: 17)).foregroundStyle(.blue).frame(width: 38, height: 38).background(.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 9))
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(LocalizedStringKey(preset.name)).font(.system(size: 12, weight: .semibold)).foregroundStyle(.primary)
-                                        XvicoLocalizedText(preset.detail).font(.system(size: 10)).foregroundStyle(XvicoTheme.secondaryText).lineLimit(2)
-                                        Text(preset.tags.map { XvicoLocalization.string($0, locale: locale) }.joined(separator: "  ·  ")).font(.system(size: 9, weight: .medium)).foregroundStyle(XvicoTheme.secondaryText)
-                                    }
-                                    Spacer(minLength: 0)
-                                    Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold)).foregroundStyle(.tertiary)
-                                }.padding(12).frame(maxWidth: .infinity, minHeight: 83, alignment: .leading)
-                                    .xvicoGlassPanel(cornerRadius: 14, interactive: true)
-                            }.buttonStyle(.plain)
-                        }
-                    }
-                }
-
-                HStack {
-                    XvicoLocalizedText("场景").font(.system(size: 15, weight: .semibold))
-                    Spacer()
-                    Button { showingAdd = true } label: { XvicoLocalizedLabel("添加场景", systemImage: "plus").font(.system(size: 11, weight: .semibold)) }.buttonStyle(.borderedProminent)
-                }
-                VStack(spacing: 0) {
-                    ForEach(model.scenes) { scene in
-                        HStack(spacing: 12) {
-                            ApplicationIcon(bundleID: scene.bundleID, size: 31)
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(scene.name).font(.system(size: 12, weight: .semibold))
-                                XvicoLocalizedText(scene.bundleID.isEmpty ? "未绑定应用" : scene.bundleID).font(.system(size: 10)).foregroundStyle(XvicoTheme.secondaryText)
-                            }
-                            Spacer()
-                            Button("编辑") { editingScene = scene }.buttonStyle(.borderedProminent).controlSize(.small)
-                            Button { model.exportScenes(scene) } label: { Image(systemName: "square.and.arrow.up") }.buttonStyle(.borderedProminent).controlSize(.small).help("导出场景")
-                            Toggle("启用", isOn: sceneEnabledBinding(scene)).labelsHidden().toggleStyle(.switch).controlSize(.mini)
-                            Button(role: .destructive) { model.deleteScene(scene) } label: { Image(systemName: "trash") }.buttonStyle(.borderedProminent).controlSize(.small).help("删除场景")
-                        }.padding(12)
-                        if scene.id != model.scenes.last?.id { Divider().padding(.leading, 55) }
-                    }
-                    if model.scenes.isEmpty {
-                        VStack(spacing: 12) {
-                            Image(systemName: "square.stack.3d.up").font(.system(size: 28)).foregroundStyle(XvicoTheme.secondaryText)
-                            XvicoLocalizedText("还没有场景").font(.system(size: 14, weight: .semibold))
-                            XvicoLocalizedText("点击上角「添加场景」，选一个 App，为它单独配一套遥控器映射。").font(.system(size: 12)).foregroundStyle(XvicoTheme.secondaryText).multilineTextAlignment(.center)
-                        }.frame(maxWidth: .infinity).padding(45)
-                    }
-                }
-                .xvicoGlassPanel(cornerRadius: 16)
-            }.padding(22)
-        }
-        .sheet(isPresented: $showingAdd) {
-            ApplicationPicker(onSelect: { app in
-                let id = model.addScene(for: app)
-                showingAdd = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { editingScene = model.scenes.first { $0.id == id } }
-            }, onCancel: { showingAdd = false }).xvicoPresentationSettings()
-        }
-        .sheet(item: $editingScene) { SceneEditor(sceneID: $0.id, onDone: { editingScene = nil }).xvicoPresentationSettings() }
-        .sheet(item: $selectedPreset) { PresetEditor(preset: $0).xvicoPresentationSettings() }
-    }
-
-    private func sceneEnabledBinding(_ scene: XvicoScene) -> Binding<Bool> {
-        Binding(get: { model.scenes.first(where: { $0.id == scene.id })?.enabled ?? false }, set: { value in
-            guard let index = model.scenes.firstIndex(where: { $0.id == scene.id }) else { return }
-            model.scenes[index].enabled = value
-        })
     }
 }
 
@@ -342,7 +218,7 @@ struct VoiceCommandsEditorView: View {
                             Spacer()
                             XvicoLocalizedText(shortcut.action.rawValue).font(.system(size: 10)).foregroundStyle(XvicoTheme.secondaryText)
                             Button("编辑") { editing = shortcut; showingEditor = true }.controlSize(.small)
-                            Toggle("启用", isOn: shortcutEnabled(shortcut)).labelsHidden().toggleStyle(.switch).controlSize(.mini)
+                            Toggle("启用", isOn: shortcutEnabled(shortcut)).labelsHidden().toggleStyle(XvicoSwitchStyle()).controlSize(.mini)
                             Button(role: .destructive) { model.shortcuts.removeAll { $0.id == shortcut.id } } label: { Image(systemName: "trash") }.buttonStyle(.plain)
                         }.padding(12)
                         if shortcut.id != model.shortcuts.last?.id { Divider() }
@@ -379,19 +255,5 @@ struct ShortcutEditor: View {
         if let shortcut, let index = model.shortcuts.firstIndex(where: { $0.id == shortcut.id }) { model.shortcuts[index].name = name; model.shortcuts[index].phrase = phrase; model.shortcuts[index].action = action; model.shortcuts[index].value = value }
         else { model.shortcuts.append(UserShortcut(name: name, phrase: phrase, action: action, value: value)) }
         dismiss()
-    }
-}
-
-struct SettingsSection<Content: View>: View {
-    let title: String
-    let symbol: String
-    @ViewBuilder let content: Content
-    var body: some View {
-        VStack(alignment: .leading, spacing: XvicoLayout.rowSpacing) {
-            Label(LocalizedStringKey(title), systemImage: symbol).font(XvicoTypography.sectionTitle)
-            content
-        }.font(XvicoTypography.body).padding(XvicoLayout.cardInset).frame(maxWidth: .infinity, alignment: .leading)
-            .xvicoGlassPanel(cornerRadius: 18)
-            .shadow(color: .black.opacity(0.045), radius: 13, y: 5)
     }
 }

@@ -325,7 +325,7 @@
 "未识别的按键：%@，请重新录制" = "Unrecognized key: %@. Record it again.";
 "本机模型不可用" = "Local Model Unavailable";
 "本机模型可用" = "Local Model Available";
-"本次自动配置遥控器语音所需的蓝牙诊断参数，由 Apple PacketLogger 接收蓝牙数据并提取遥控器音频；这会启用 HCISkipAuth 和系统文件日志，日志可能包含其他蓝牙设备数据。临时采集文件停止后删除，原诊断设置会恢复；系统自行产生的日志可能另行保留。操作可能短暂影响蓝牙连接，最多持续一小时，并需要系统管理员批准。" = "This session automatically configures Bluetooth diagnostics and uses Apple PacketLogger to extract remote audio. It enables HCISkipAuth and system file logging, which may include data from other Bluetooth devices. Temporary capture files are deleted and the original settings restored when capture stops; system-generated logs may remain. Bluetooth connections may briefly be affected. The session lasts at most one hour and requires administrator approval.";
+"本次自动配置遥控器语音所需的蓝牙诊断参数，由 Apple PacketLogger 接收蓝牙数据并提取遥控器音频；这会启用 HCISkipAuth 和系统文件日志，日志可能包含其他蓝牙设备数据。临时采集文件停止后删除，原诊断设置会恢复；系统自行产生的日志可能另行保留。操作可能短暂影响蓝牙连接，启动后持续待命，直至主动停止、退出应用或连接中断；需要系统管理员批准。" = "This session automatically configures Bluetooth diagnostics and uses Apple PacketLogger to extract remote audio. It enables HCISkipAuth and system file logging, which may include data from other Bluetooth devices. Temporary capture files are deleted and the original settings restored when capture stops; system-generated logs may remain. Bluetooth connections may briefly be affected. Once started, the session stays available until you stop, quit the app or lose the connection, and requires administrator approval.";
 "权限" = "Permissions";
 "松开" = "Released";
 "某个 App 在最前面时，自动套用它的映射规则。" = "Automatically apply an app's mapping rules while it is frontmost.";
@@ -404,7 +404,7 @@
 "第一次点击仍执行原功能；第二次切换外圈动作。不使用可关闭此功能。" = "The first press keeps its original action; the second switches the ring action. Choose Not Used to disable this.";
 "等待 Siri Remote 连接" = "Waiting for Siri Remote";
 "等待 Siri Remote 音频（未使用 Mac 麦克风）" = "Waiting for Siri Remote audio (not using the Mac microphone)";
-"等待 Siri Remote 音频；临时采集最多持续一小时" = "Waiting for Siri Remote audio; temporary capture lasts at most one hour";
+"等待 Siri Remote 音频；停止或退出应用时结束采集" = "Waiting for Siri Remote audio; capture ends when you stop or quit the app";
 "等待「快捷指令.app」返回执行结果…" = "Waiting for the Shortcuts app to return the result…";
 "等待系统授权" = "Waiting for System Access";
 "等待系统管理员批准" = "Waiting for Administrator Approval";
@@ -583,7 +583,7 @@
 "一次安装，按需启动；记住授权不会持续收音。" = "Install once, start on demand. Saved approval does not keep the microphone recording.";
 "仅启动本次（临时授权）" = "Start this session only (temporary approval)";
 "保存后台授权" = "Save background approval";
-"保存授权会安装仅供 Xvico 调用的系统后台，需要管理员批准一次；安装本身不启动采音。以后点击启动即可复用授权，重开应用仍有效。每次采集仍会临时启用 HCISkipAuth 与蓝牙文件日志，可能含其他设备数据，可能短暂影响蓝牙连接；单次最多一小时。停止或退出后删除临时采集并恢复诊断设置，系统日志可能另留。可随时移除后台授权。也可选择仅授权本次。" = "Saving approval installs a system helper callable only by Xvico and requires administrator approval once. Installation does not start capture. Later starts reuse this approval, including after reopening the app. Each capture temporarily enables HCISkipAuth and Bluetooth file logging, which may include other devices and briefly affect Bluetooth connections. Each session lasts up to one hour. Stopping or quitting deletes temporary captures and restores diagnostics; system logs may remain. You can remove the helper at any time, or approve just this session instead.";
+"保存授权会安装仅供 Xvico 调用的系统后台，需要管理员批准一次；安装本身不启动采音。以后点击启动即可复用授权，重开应用仍有效。每次采集仍会临时启用 HCISkipAuth 与蓝牙文件日志，可能含其他设备数据，可能短暂影响蓝牙连接；启动后持续待命，直至主动停止、退出应用或连接中断。停止或退出后删除临时采集并恢复诊断设置，系统日志可能另留。可随时移除后台授权。也可选择仅授权本次。" = "Saving approval installs a system helper callable only by Xvico and requires administrator approval once. Installation does not start capture. Later starts reuse this approval, including after reopening the app. Each capture temporarily enables HCISkipAuth and Bluetooth file logging, which may include other devices and briefly affect Bluetooth connections. Once started, the session stays available until you stop, quit the app or lose the connection. Stopping or quitting deletes temporary captures and restores diagnostics; system logs may remain. You can remove the helper at any time, or approve just this session instead.";
 "保存授权并安装后台" = "Save approval and install helper";
 "后台安装未通过文件核对，请重试" = "Helper files did not match after installation. Please retry.";
 "后台授权已保存，按需启动采集" = "Background approval saved. Capture starts on demand.";
@@ -718,3 +718,9 @@
 "遥控器输入连接已中断；连接恢复后请重新启动系统语音后端" = "The remote input connection was interrupted. Start the system voice backend again after reconnecting.";
 
 "通过 Telegram 联系开发者" = "Contact the developer on Telegram";
+
+"当前生效" = "Active now";
+"已启用" = "Enabled";
+"已暂停" = "Paused";
+"编辑中" = "Editing";
+"场景操作" = "Scene actions";

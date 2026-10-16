@@ -1,4 +1,4 @@
-// Xvico's bounded, administrator-approved Apple PacketLogger capture session.
+// Xvico's explicitly started, administrator-approved Apple PacketLogger session.
 // No daemon, HAL plug-in, microphone fallback, activation or network access.
 import Foundation
 import Darwin
@@ -132,10 +132,9 @@ enum XvibeVoiceCapture {
         capture.standardOutput = FileHandle.nullDevice; capture.standardError = FileHandle.nullDevice
         try capture.run()
         defer { if capture.isRunning { capture.terminate(); capture.waitUntilExit() } }
-        let limit = Date().addingTimeInterval(3600)
         let firstPacketDeadline = Date().addingTimeInterval(15)
         var ready = false
-        while capture.isRunning && interrupted == 0 && Date() < limit && kill(appPID, 0) == 0 {
+        while capture.isRunning && interrupted == 0 && kill(appPID, 0) == 0 {
             if sessionDirectory.exists("stop") { break }
             let traceSize = (try? FileManager.default.attributesOfItem(atPath: trace.path)[.size] as? NSNumber)?.intValue ?? 0
             if !ready && Date() > firstPacketDeadline && traceSize == 0 {

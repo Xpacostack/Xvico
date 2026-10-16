@@ -12,7 +12,7 @@ struct PresetEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack { XvicoLocalizedLabel(preset.name, systemImage: preset.symbol).font(.title3.bold()); Spacer(); Button("取消") { dismiss() } }
+            HStack { XvicoLocalizedLabel(preset.name, systemImage: preset.symbol).font(.title3.bold()); Spacer(); Button("取消") { dismiss() }.buttonStyle(XvicoToolbarButtonStyle()) }
             XvicoLocalizedText(preset.detail).font(.subheadline).foregroundStyle(XvicoTheme.secondaryText)
             Divider()
             XvicoLocalizedText("应用到哪个 App？").font(.headline)
@@ -21,7 +21,7 @@ struct PresetEditor: View {
                     if bundleID.isEmpty { XvicoLocalizedText("选择应用") } else { Text(appName) }
                     XvicoLocalizedText(bundleID.isEmpty ? "选择正在运行的 App" : bundleID).font(.caption).foregroundStyle(XvicoTheme.secondaryText)
                 }; Spacer(); Image(systemName: "chevron.right") }.padding(12).frame(maxWidth: .infinity)
-            }.buttonStyle(.plain).background(XvicoTheme.card, in: RoundedRectangle(cornerRadius: 10))
+            }.buttonStyle(XvicoInsetGlassButtonStyle())
             XvicoLocalizedText("映射预览").font(.headline)
             ScrollView {
                 VStack(spacing: 0) {
@@ -42,7 +42,7 @@ struct PresetEditor: View {
                 }.background(XvicoTheme.card, in: RoundedRectangle(cornerRadius: 10))
             }.frame(maxHeight: 365)
             if preset.id == "codex" { XvicoLocalizedText("此 App 场景的外圈动作设为 Codex 任务（⌘1–9）。触控输入需要遥控器接口连接后验证。").font(.caption).foregroundStyle(XvicoTheme.secondaryText) }
-            HStack { XvicoLocalizedText("已有该 App 场景时替换其映射。").font(.caption).foregroundStyle(XvicoTheme.secondaryText); Spacer(); Button("应用预设") { model.applyPreset(preset, bundleID: bundleID); dismiss() }.buttonStyle(.borderedProminent).disabled(bundleID.isEmpty) }
+            HStack { XvicoLocalizedText("已有该 App 场景时替换其映射。").font(.caption).foregroundStyle(XvicoTheme.secondaryText); Spacer(); Button("应用预设") { model.applyPreset(preset, bundleID: bundleID); dismiss() }.buttonStyle(XvicoToolbarButtonStyle(prominent: true)).disabled(bundleID.isEmpty) }
         }.padding(20).frame(width: 560)
             .xvicoGlassPanel(cornerRadius: 22, floating: true).onAppear {
             if let app = ApplicationCatalog.installed(preset.suggestedBundleID) {

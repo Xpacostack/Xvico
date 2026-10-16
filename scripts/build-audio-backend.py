@@ -54,3 +54,4 @@ run(['swiftc', '-O', '-parse-as-library', root/'ThirdParty/SiriRemoteVoiceBridge
 run([out/'parser-tests'])
 run(c + [src/'router/MonitorAudioRing.c', src/'router/test_monitor_ring.c', '-o', out/'monitor-ring-tests'])
 run([out/'monitor-ring-tests'])
+run(['python3', root/'scripts/test-voice-session-lifetime.py'])

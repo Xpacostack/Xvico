@@ -110,6 +110,7 @@ private struct XvicoPresentationSettings: ViewModifier {
             .environment(\.locale, model.interfaceLocale)
             .preferredColorScheme((XvicoAppearance(rawValue: appearance) ?? .system).colorScheme)
             .tint(.blue)
+            .environment(\.xvicoImmersiveGlass, true)
     }
 }
 
